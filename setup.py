@@ -62,7 +62,7 @@ setup(
     'torch >= 1.4.0',
     'torchvision >= 0.5.0',
     'tqdm >= 4.40.2',
-    'comet_ml >= 3.1.3'
+    'comet_ml >= 3.1.3', 'networkx', 'sympy'
   ],
 
   python_requires='>=3.5'

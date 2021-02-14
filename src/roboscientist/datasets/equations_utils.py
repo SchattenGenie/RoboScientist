@@ -1,7 +1,12 @@
 import sympy as snp
 import networkx as nx
 import numpy as np
+import re
 from . import equations_settings
+
+
+def construct_symbol(name):
+    return "Symbol('{}')".format(name)
 
 
 def generate_random_tree_with_prior_on_arity(n=10, max_degree=3, degreeness=1):
@@ -30,40 +35,86 @@ def generate_random_tree_with_prior_on_arity(n=10, max_degree=3, degreeness=1):
     return nx.bfs_tree(nx.algorithms.tree.coding.from_prufer_sequence(prufer_sequence), 0)
 
 
-def generate_random_formula_on_graph(D, n_symbols, max_degree=2):
-    symbols = ["Symbol('x{}')".format(i) for i in range(n_symbols)]
+def generate_random_formula_on_graph(D, n_symbols, setup=equations_settings.setup_general):
+    setup()
 
+    symbols = [construct_symbol("x{}".format(i)) for i in range(n_symbols)]
     for node in D.nodes():
-        if D.out_degree(node) == 0:  # leaf -> either constant or symbol
+        # leaf -> either constant or symbol
+        if D.out_degree(node) == 0:
             if np.random.choice([0, 1]):
-                D.nodes[node]["expr"] = equations_settings.SYMPY_PREFIX + np.random.choice(symbols)
+                D.nodes[node]["expr"] = np.random.choice(symbols)
             else:
                 D.nodes[node]["expr"] = str(np.random.choice(equations_settings.constants))
+        # functions of arity one
         elif D.out_degree(node) == 1:
-            f = np.random.choice(equations_settings.functions_arity_1)
-            if f == "":
-                D.nodes[node]["expr"] = f
-            else:
-                D.nodes[node]["expr"] = equations_settings.SYMPY_PREFIX + f
-        elif D.out_degree(node) == 2:
-            D.nodes[node]["expr"] = equations_settings.SYMPY_PREFIX + np.random.choice(equations_settings.functions_arity_2)
+            f = np.random.choice(equations_settings.functions_with_arity[1])
+            D.nodes[node]["expr"] = f
+        # functions with arity D.out_degree(node) + any arity
+        else:
+            D.nodes[node]["expr"] = np.random.choice(
+                equations_settings.functions_with_arity[0] + equations_settings.functions_with_arity.get(D.out_degree(node), [""])
+            )
+
     return D
 
 
+class _EnumerateConstant:
+    def __init__(self):
+        self.const_counter = 0
+
+    def __call__(self, match):
+        const = construct_symbol(equations_settings.CONST_BASE_NAME + str(self.const_counter))
+        self.const_counter += 1
+        return const
+
+
+def enumerate_constants_in_expression(expr: str):
+    """
+    const + x0**const -> const_1 + x0**const_2
+    :param expr: str
+    :return:
+    """
+    enumerate_constants = _EnumerateConstant()
+    return re.sub(r"Symbol\('{}'\)".format(equations_settings.CONST_BASE_NAME), enumerate_constants, expr)
+
+
 def graph_to_expression(D, node=0):
+    """
+    Converts graph to expression
+    :param D: nx.DiGraph, tree where each node has attribute `expr`
+    :param node: int, root of tree (or subtree)
+    :return:
+    """
     if D.out_degree(node) == 0:
         expr = D.nodes[node]['expr']
     else:
-        expr = [
-            D.nodes[node]['expr'],
-            "(",
-            ",".join([graph_to_expression(D, node=child) for child in D[node]]),
-            ")"
-        ]
-        expr = "".join(expr)
+        if D.nodes[node]['expr']:
+            expr = [
+                D.nodes[node]['expr'],
+                "(",
+                ",".join([graph_to_expression(D, node=child) for child in D[node]]),
+                ")"
+            ]
+            expr = "".join(expr)
+            # checking if expr contains constants only as symbols
+            # if so => rename it as one constant
+            # i.e. sin(const) -> const, e^{const + 5} -> const, etc.
+            symbols = re.findall(r'Symbol\((.*?)\)', expr)
+            if len(symbols) and all([equations_settings.CONST_BASE_NAME in symbol for symbol in symbols]):
+                expr = construct_symbol(equations_settings.CONST_BASE_NAME)
+        else:
+            # None => assuming that arity == 1
+            # and thus we do not nest it
+            expr = graph_to_expression(D, node=list(D[node].keys())[0])
 
     if node == 0:
-        return snp.sympify(expr)  # eval
+        # post-factum enumeration of consts
+        # firstly we use sympy to simplify expression
+        expr = snp.simplify(snp.sympify(expr))  # eval
+        # secondly we numerate constants if any
+        expr = enumerate_constants_in_expression(snp.srepr(expr))
+        return snp.simplify(snp.sympify(expr))  # eval
     else:
         return expr
 
@@ -74,9 +125,9 @@ def expr_to_tree(expr, D=None, node=None):
         node = 0
 
     if expr.func.is_symbol:
-        D.add_node(node, expr=equations_settings.SYMPY_PREFIX + "Symbol('{}')".format(expr.name))
+        D.add_node(node, expr="Symbol('{}')".format(expr.name))
     elif expr.is_Function or expr.is_Add or expr.is_Mul or expr.is_Pow:
-        D.add_node(node, expr=equations_settings.SYMPY_PREFIX + type(expr).__name__)
+        D.add_node(node, expr=type(expr).__name__)
     elif expr.is_constant():
         D.add_node(node, expr=str(expr))
 
@@ -116,7 +167,7 @@ def postfix_to_expr(post, post_arity):
 
     def symbol_or_constant(x):
         if isinstance(x, str):
-            return equations_settings.SYMPY_PREFIX + "Symbol('{}')".format(x)
+            return "Symbol('{}')".format(x)
         else:
             return str(x)
 
@@ -128,7 +179,7 @@ def postfix_to_expr(post, post_arity):
             for _ in range(arg_arity):
                 stack_temporary.append(stack.pop())
             expr = [
-                equations_settings.SYMPY_PREFIX + arg,
+                arg,
                 "(",
                 ",".join([_arg for _arg in stack_temporary[::-1]]),
                 ")"
