@@ -28,7 +28,7 @@ class BaseEquation(base.BaseProblem):
     def subs(self, constants=None):
         # X_sympy = numpy_to_sympy_array(X, self)
         constants_sympy = numpy_to_sympy_constants(constants, self)
-        return self._expr.subs(constants_sympy)
+        return BaseEquation(self._expr.subs(constants_sympy))
 
     def derivative_wrt_constants(self, X, constants=None):
         X_sympy = numpy_to_sympy_array(X, self)
@@ -45,6 +45,9 @@ class BaseEquation(base.BaseProblem):
         X_sympy = numpy_to_sympy_array(X, self)
         constants_sympy = numpy_to_sympy_constants(constants, self)
         return self._lambdified_expr(**X_sympy, **constants_sympy)
+
+    def __call__(self, X, constants=None):
+        return self.func(X, constants)
 
     def __str__(self):
         return self._expr.__str__()
@@ -66,15 +69,19 @@ class BaseEquation(base.BaseProblem):
 
     @property
     def free_variables(self):
-        return [x for x in list(self._expr.atoms()) if x.func.is_symbol and not (equations_settings.CONST_BASE_NAME in x.name)]
+        _free_variables = [x for x in list(self._expr.atoms()) if x.func.is_symbol and not (equations_settings.CONST_BASE_NAME in x.name)]
+        _free_variables = sorted(_free_variables, key=lambda x: float(x.name.strip(equations_settings.VARS_BASE_NAME)))
+        return _free_variables
 
     @property
     def variables(self):
-        return [x for x in list(self._expr.atoms()) if x.func.is_symbol]
+        return self.free_variables + self.constants
 
     @property
     def constants(self):
-        return [x for x in list(self._expr.atoms()) if (x.func.is_symbol and (equations_settings.CONST_BASE_NAME in x.name))]
+        _constants = [x for x in list(self._expr.atoms()) if (x.func.is_symbol and (equations_settings.CONST_BASE_NAME in x.name))]
+        _constants = sorted(_constants, key=lambda x: float(x.name.strip(equations_settings.CONST_BASE_NAME)))
+        return _constants
 
 
 def numpy_to_sympy_array(X, equation: BaseEquation):
