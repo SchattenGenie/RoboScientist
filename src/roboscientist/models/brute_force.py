@@ -3,9 +3,6 @@ from roboscientist.datasets import equations_settings, equations_utils, equation
 import numpy as np
 
 
-
-
-
 def brute_force_solver(n_max=5, n_symbols=2):
     # https://codereview.stackexchange.com/questions/202773/generating-all-unlabeled-trees-with-up-to-n-nodes
     import networkx as nx
