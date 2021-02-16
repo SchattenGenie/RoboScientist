@@ -59,7 +59,7 @@ def generate_random_formula_on_graph(D, n_symbols, setup=equations_settings.setu
     return D
 
 
-class _EnumerateConstant:
+class _Enumerate:
     def __init__(self):
         self.const_counter = 0
 
@@ -69,14 +69,25 @@ class _EnumerateConstant:
         return const
 
 
-def enumerate_constants_in_expression(expr: str):
+def enumerate_constants_in_expression(expr: str, base=equations_settings.CONST_BASE_NAME):
     """
     const + x0**const -> const_1 + x0**const_2
     :param expr: str
     :return:
     """
-    enumerate_constants = _EnumerateConstant()
-    return re.sub(r"Symbol\('{}'\)".format(equations_settings.CONST_BASE_NAME), enumerate_constants, expr)
+    enumerate_constants = _Enumerate()
+    return re.sub(r"Symbol\('{}'\)".format(base), enumerate_constants, expr)
+
+
+def enumerate_vars_in_expression(expr: str):
+    symbols = re.findall(r"Symbol\((.*?)\)", expr)
+    symbols = [symbol[1:-1] for symbol in symbols if "x" in symbol]
+    symbols= list(set(symbols))
+    symbols = sorted(symbols, key=lambda x: float(x.strip(equations_settings.VARS_BASE_NAME)))
+    map_variables = {old_symbol: "{}{}".format(equations_settings.VARS_BASE_NAME, i) for i, old_symbol in enumerate(symbols)}
+    for old_symbol, new_symbol in map_variables.items():
+        expr = expr.replace(old_symbol, new_symbol)
+    return expr
 
 
 def graph_to_expression(D, node=0):
@@ -109,11 +120,14 @@ def graph_to_expression(D, node=0):
             expr = graph_to_expression(D, node=list(D[node].keys())[0])
 
     if node == 0:
-        # post-factum enumeration of consts
+        # post-factum renumeration of consts and variables
         # firstly we use sympy to simplify expression
         expr = snp.simplify(snp.sympify(expr))  # eval
         # secondly we numerate constants if any
-        expr = enumerate_constants_in_expression(snp.srepr(expr))
+        expr = enumerate_constants_in_expression(snp.srepr(expr), base=equations_settings.CONST_BASE_NAME)
+        # thirdly we numerate variables in ascending order
+        expr = enumerate_vars_in_expression(snp.srepr(expr))
+
         return snp.simplify(snp.sympify(expr))  # eval
     else:
         return expr

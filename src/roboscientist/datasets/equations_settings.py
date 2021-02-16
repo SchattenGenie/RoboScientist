@@ -9,7 +9,7 @@ functions_with_arity = {
 }
 
 CONST_BASE_NAME = "const"
-
+VARS_BASE_NAME = "x"
 
 def setup_polynomial():
     global functions_with_arity
