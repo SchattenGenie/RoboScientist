@@ -153,7 +153,7 @@ def expr_to_tree(expr, D=None, node=None):
     return D, node
 
 
-def expr_to_postfix(expr):
+def expr_to_postfix(expr, mul_add_arity_fixed=False):
     """
     Returns postorder traversal (i.e. in polish notation) of the symbolic expression
     """
@@ -161,15 +161,49 @@ def expr_to_postfix(expr):
     post = []
     post_arity = []
     for expr_node in snp.postorder_traversal(expr):
-        post_arity.append(len(expr_node.args))
         if expr_node.func.is_symbol:
             post.append(expr_node.name)
+            post_arity.append(len(expr_node.args))
+
         elif expr_node.is_Function or expr_node.is_Add or expr_node.is_Mul or expr_node.is_Pow:
-            post.append(type(expr_node).__name__)
+            if mul_add_arity_fixed and (expr_node.is_Add or expr_node.is_Mul):
+                for i in range(len(expr_node.args) - 1):
+                    post.append(type(expr_node).__name__)
+                    post_arity.append(2)
+            else:
+                post.append(type(expr_node).__name__)
+                post_arity.append(len(expr_node.args))
         elif expr_node.is_constant():
             post.append(float(expr_node))
-
+            post_arity.append(len(expr_node.args))
     return post, post_arity
+
+
+def expr_to_infix(expr, mul_add_arity_fixed=False):
+    """
+    Returns preorder traversal of the symbolic expression
+    """
+
+    pre = []
+    pre_arity = []
+
+    for expr_node in snp.preorder_traversal(expr):
+        if expr_node.func.is_symbol:
+            pre.append(expr_node.name)
+            pre_arity.append(len(expr_node.args))
+        elif expr_node.is_Function or expr_node.is_Add or expr_node.is_Mul or expr_node.is_Pow:
+            if mul_add_arity_fixed and (expr_node.is_Add or expr_node.is_Mul):
+                for i in range(len(expr_node.args) - 1):
+                    pre_arity.append(2)
+                    pre.append(type(expr_node).__name__)
+            else:
+                pre_arity.append(len(expr_node.args))
+                pre.append(type(expr_node).__name__)
+        elif expr_node.is_constant():
+            pre.append(float(expr_node))
+            post_arity.append(len(expr_node.args))
+
+    return pre, pre_arity
 
 
 def postfix_to_expr(post, post_arity):
@@ -202,21 +236,3 @@ def postfix_to_expr(post, post_arity):
             stack.append(expr)
 
     return snp.sympify(stack[0])  # eval
-
-
-def expr_to_infix(expr):
-    """
-    Returns preorder traversal of the symbolic expression
-    """
-
-    pre = []
-    pre_arity = []
-    for expr_node in snp.preorder_traversal(expr):
-        pre_arity.append(len(expr_node.args))
-        if expr_node.func.is_symbol:
-            pre.append(expr_node.name)
-        elif expr_node.is_Function or expr_node.is_Add or expr_node.is_Mul or expr_node.is_Pow:
-            pre.append(type(expr_node).__name__)
-        elif expr_node.is_constant():
-            pre.append(float(expr_node))
-    return pre, pre_arity
