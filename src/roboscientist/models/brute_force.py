@@ -1,9 +1,18 @@
 import itertools
 from roboscientist.datasets import equations_settings, equations_utils, equations_base
 from roboscientist.models import utils
+from .solver_base import BaseSolver
 import numpy as np
 from tqdm import tqdm
 import time
+
+
+class BruteForceSolver(BaseSolver):
+    def __init__(self, logger, *args, **kwargs):
+        super().__init__(logger, *args, **kwargs)
+
+    def _training_step(self, equations: Dataset) -> Dataset:
+        raise NotImplementedError('func is not implemented.')
 
 
 def brute_force_solver(X: np.ndarray, y: np.ndarray, max_time=10, max_iters=None):

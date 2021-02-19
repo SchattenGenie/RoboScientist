@@ -13,14 +13,20 @@ class BaseLogger(ABC):
         self._time = time.time()
 
     @abstractmethod
-    def log_metrics(self, equation, equation_candidate):
+    def log_metrics(self, equation, candidate_equation):
         return None
+
+    @abstractmethod
+    def commit_metrics(self):
+        pass
 
 
 class CometLogger:
     def __init__(self, experiment):
         self._experiment = experiment
 
-    def log(self, equation, equation_candidate):
+    def log(self, equation, candidate_equation):
         pass
 
+    def commit_metrics(self):
+        pass
