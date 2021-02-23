@@ -1,5 +1,5 @@
 import itertools
-from roboscientist.datasets import equations_settings, equations_utils, equations_base
+from roboscientist.datasets import equations_settings, equations_utils, equations_base, Dataset
 from roboscientist.models import utils
 from .solver_base import BaseSolver
 import numpy as np
@@ -8,15 +8,22 @@ import time
 
 
 class BruteForceSolver(BaseSolver):
-    def __init__(self, logger, *args, **kwargs):
+    def __init__(self, logger, max_time=1, *args, **kwargs):
+        self._max_time = max_time
         super().__init__(logger, *args, **kwargs)
 
     def _training_step(self, equations: Dataset) -> Dataset:
-        raise NotImplementedError('func is not implemented.')
+        candidate_solutions = []
+        for equation in equations:
+            X, y = equation.dataset
+            # TODO: restart not from the start (generator)
+            candidate_solution = brute_force_solver(X, y, max_time=self._max_time)
+            candidate_solutions.append(candidate_solution)
+        return Dataset(candidate_solutions)
 
 
 def brute_force_solver(X: np.ndarray, y: np.ndarray, max_time=10, max_iters=None):
-    n_symbols = X.shape[1]
+    n_symbols = X.shape[1]  # TODO: pass equation, not X, y
 
     best_loss = 1e9
     best_candidate_equation = None

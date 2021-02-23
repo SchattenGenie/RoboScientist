@@ -15,7 +15,7 @@ class BaseSolver(ABC):
 
     def log_metrics(self, equations: Dataset, candidate_equations: Dataset):
         for equation, candidate_equation in zip(equations, candidate_equations):
-            self._logger.log_metrics(equations, candidate_equation)
+            self._logger.log_metrics(equation, candidate_equation)
         self._logger.commit_metrics()
 
     def solve(self, equations: Dataset, epochs=100) -> Dataset:
