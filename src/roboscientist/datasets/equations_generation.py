@@ -6,10 +6,11 @@ from . import equations_utils
 from . import equations_settings
 
 
-def generate_polynomial(nodes=10, n_variables=1):
+def generate_polynomial(nodes=10, n_variables=1, space=((-5., 5.), )):
     """
     Returns polynomial equation in the form f(x_1, x_2, etc, x_n) = y
     Where f() is a polynomial expression of its arguments
+    :param space:
     :param nodes:
     :param n_variables:
     :return:
@@ -22,10 +23,10 @@ def generate_polynomial(nodes=10, n_variables=1):
     # substract x_{n+1}
     # expr = expr - snp.sympify(equations_utils.construct_symbol("x{}".format(n_variables)))
     # expr = snp.simplify(expr)
-    return equations_base.BaseEquation(expr)
+    return equations_base.BaseEquation(expr, space)
 
 
-def generate_random_equation(nodes=10, n_variables=1, max_degree=3):
+def generate_random_equation(nodes=10, n_variables=1, max_degree=3, space=((-5., 5.), )):
     """
     Returns random equation in the form f(x_1, ..., x_n) = y
     :param nodes:
@@ -40,5 +41,5 @@ def generate_random_equation(nodes=10, n_variables=1, max_degree=3):
     )
     expr = equations_utils.graph_to_expression(D)
     expr = snp.simplify(expr)
-    return equations_base.BaseEquation(expr)
+    return equations_base.BaseEquation(expr, space)
 

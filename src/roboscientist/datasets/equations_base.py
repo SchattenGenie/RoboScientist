@@ -2,10 +2,13 @@ from . import base
 from . import equations_utils
 from . import equations_settings
 import sympy as snp
+import numpy as np
+import skopt
+from skopt import Space
 
 
 class BaseEquation(base.BaseProblem):
-    def __init__(self, expr):
+    def __init__(self, expr, space=None):
         """
         Transforms expr to
         :param expr:
@@ -24,6 +27,23 @@ class BaseEquation(base.BaseProblem):
             derivative = snp.Derivative(expr, variable, evaluate=True)
             lambdified_derivative = lambdify(self.variables, derivative)
             self._free_variable_derivatives[variable.name] = lambdified_derivative
+        super().__init__(space)
+
+    def _init_dataset(self):
+        self._X = np.zeros((0, len(self.free_variables)))
+        self._y = np.zeros((0, ))
+
+    def _init_space(self, space) -> Space:
+        if space is None:
+            self._domain = None
+        elif len(space) == len(self.free_variables):
+            self._domain = Space(space)
+        elif len(space) == 1:
+            self._domain = Space(space * len(self.free_variables))
+        else:
+            raise ValueError("space is not correct")
+
+        return self.domain
 
     def subs(self, constants=None):
         # X_sympy = numpy_to_sympy_array(X, self)
