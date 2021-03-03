@@ -201,7 +201,7 @@ def expr_to_infix(expr, mul_add_arity_fixed=False):
                 pre.append(type(expr_node).__name__)
         elif expr_node.is_constant():
             pre.append(float(expr_node))
-            post_arity.append(len(expr_node.args))
+            pre_arity.append(len(expr_node.args))
 
     return pre, pre_arity
 
