@@ -15,7 +15,7 @@ def generate_polynomial(nodes=10, n_variables=1, space=((-5., 5.), )):
     :param n_variables:
     :return:
     """
-    with equations_settings.settings(functions=["Add", "Mul"], constants=1):
+    with equations_settings.settings(functions=["Add", "Mul"], constants=[1]):
         D = equations_utils.generate_random_tree_with_prior_on_arity(nodes, max_degree=2)
         D = equations_utils.generate_random_formula_on_graph(D, n_symbols=n_variables)
         expr = equations_utils.graph_to_expression(D)
