@@ -15,15 +15,15 @@ def generate_polynomial(nodes=10, n_variables=1, space=((-5., 5.), )):
     :param n_variables:
     :return:
     """
-    D = equations_utils.generate_random_tree_with_prior_on_arity(nodes, max_degree=2)
-    D = equations_utils.generate_random_formula_on_graph(
-        D, n_symbols=n_variables, setup=equations_settings.setup_polynomial
-    )
-    expr = equations_utils.graph_to_expression(D)
-    # substract x_{n+1}
-    # expr = expr - snp.sympify(equations_utils.construct_symbol("x{}".format(n_variables)))
-    # expr = snp.simplify(expr)
-    return equations_base.BaseEquation(expr, space)
+    with equations_settings.settings(functions=["Add", "Mul"], constants=1):
+        D = equations_utils.generate_random_tree_with_prior_on_arity(nodes, max_degree=2)
+        D = equations_utils.generate_random_formula_on_graph(D, n_symbols=n_variables)
+        expr = equations_utils.graph_to_expression(D)
+        # substract x_{n+1}
+        # expr = expr - snp.sympify(equations_utils.construct_symbol("x{}".format(n_variables)))
+        # expr = snp.simplify(expr)
+        expr = equations_base.Equation(expr, space)
+    return expr
 
 
 def generate_random_equation(nodes=10, n_variables=1, max_degree=3, space=((-5., 5.), )):
@@ -34,12 +34,11 @@ def generate_random_equation(nodes=10, n_variables=1, max_degree=3, space=((-5.,
     :param max_degree:
     :return:
     """
-    equations_settings.setup_general()
-    D = equations_utils.generate_random_tree_with_prior_on_arity(nodes, max_degree=max_degree)
-    D = equations_utils.generate_random_formula_on_graph(
-        D, n_symbols=n_variables, setup=equations_settings.setup_general
-    )
-    expr = equations_utils.graph_to_expression(D)
-    expr = snp.simplify(expr)
-    return equations_base.BaseEquation(expr, space)
+    with equations_settings.settings(constants=[1]):
+        D = equations_utils.generate_random_tree_with_prior_on_arity(nodes, max_degree=max_degree)
+        D = equations_utils.generate_random_formula_on_graph(D, n_symbols=n_variables)
+        expr = equations_utils.graph_to_expression(D)
+        expr = snp.simplify(expr)
+        expr = equations_base.Equation(expr, space)
+    return expr
 

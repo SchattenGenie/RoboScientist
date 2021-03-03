@@ -1,35 +1,83 @@
 import sympy as snp
+from contextlib import ContextDecorator, contextmanager
 
-constants = [1]
+from collections import namedtuple
+from copy import copy
+from typing import List
 
-functions_with_arity = {
-    0: ["Add", "Mul"],  # any arity >= 2
-    1: ["sin", "cos", "sqrt"],
-    2: ["Pow"]
-}
 
 CONST_BASE_NAME = "const"
 VARS_BASE_NAME = "x"
 
-def setup_polynomial():
-    global functions_with_arity
-    global constants
-    constants = [1]
-    functions_with_arity[1] = [None]
-    functions_with_arity[2] = ["Mul", "Add"]
+sympy_function = namedtuple(typename="function", field_names=["arity", "repr", "func"])
 
 
-def setup_general():
-    global functions_with_arity
-    global constants
-    constants = [1]
-    functions_with_arity[1] = ["sin", "cos", "sqrt"]
-    functions_with_arity[2] = ["Add", "Mul", "Pow"]
+class EquationSettings(ContextDecorator):
+    def __init__(self):
+        from sympy.core.function import arity as get_arity
+        functions = ["sin", "cos", "sqrt", "Pow", "Add", "Mul"]
+        self._all_functions = {}
+        self._all_constants = [1, "Symbol('{}')".format(CONST_BASE_NAME)]
+        for function in functions:
+            func = snp.sympify(function)
+            self._all_functions[function] = sympy_function(
+                arity=get_arity(func),  # for some functions like "Add" and "Mull" it is None by default
+                repr=function,
+                func=func
+            )
+
+        self._add_mul_arity_any = False
+        self._functions = copy(self._all_functions)
+        self._constants = copy(self._all_constants)
+
+    @property
+    def functions(self):
+        return self._functions
+
+    @property
+    def constants(self):
+        return self._constants
+
+    @property
+    def add_mul_arity_any(self):
+        return self._add_mul_arity_any
+
+    def __call__(self, functions: List = None, constants: List = None, add_mul_arity_any: bool = False):
+        """
+
+        """
+        if functions:
+            for function in functions:
+                self._functions[function] = self._all_functions[function]
+        self._add_mul_arity_any = add_mul_arity_any
+        if constants:
+            self._constants = constants
+        return self
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_value, exc_traceback):
+        self._add_mul_arity_any = False
+        self._functions = copy(self._all_functions)
+        self._constants = copy(self._all_constants)
+        if exc_type:
+            print(f'exc_type: {exc_type}')
+            print(f'exc_value: {exc_value}')
+            print(f'exc_traceback: {exc_traceback}')
+
+    def get_functions_by_arity(self, arity):
+        """
+        arity: int or None
+        """
+        functions_with_requested_arity = []
+        for function in self._all_functions:
+            if self._all_functions[function].arity == arity:
+                functions_with_requested_arity.append(self._all_functions[function].repr)
+            elif (self._all_functions[function].arity is None) and (arity > 1) and (self._add_mul_arity_any):
+                functions_with_requested_arity.append(self._all_functions[function].repr)
+
+        return functions_with_requested_arity
 
 
-def setup_brute_force():
-    global functions_with_arity
-    global constants
-    constants = ["Symbol('{}')".format(CONST_BASE_NAME)]
-    functions_with_arity[1] = ["sin", "cos", "sqrt"]
-    functions_with_arity[2] = ["Add", "Mul", "Pow"]
+settings = EquationSettings()

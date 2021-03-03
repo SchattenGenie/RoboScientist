@@ -35,9 +35,7 @@ def generate_random_tree_with_prior_on_arity(n=10, max_degree=3, degreeness=1):
     return nx.bfs_tree(nx.algorithms.tree.coding.from_prufer_sequence(prufer_sequence), 0)
 
 
-def generate_random_formula_on_graph(D, n_symbols, setup=equations_settings.setup_general):
-    setup()
-
+def generate_random_formula_on_graph(D, n_symbols):
     symbols = [construct_symbol("x{}".format(i)) for i in range(n_symbols)]
     for node in D.nodes():
         # leaf -> either constant or symbol
@@ -45,15 +43,16 @@ def generate_random_formula_on_graph(D, n_symbols, setup=equations_settings.setu
             if np.random.choice([0, 1]):
                 D.nodes[node]["expr"] = np.random.choice(symbols)
             else:
-                D.nodes[node]["expr"] = str(np.random.choice(equations_settings.constants))
+                D.nodes[node]["expr"] = str(np.random.choice(equations_settings.settings.constants))
         # functions of arity one
         elif D.out_degree(node) == 1:
-            f = np.random.choice(equations_settings.functions_with_arity[1])
+            f = np.random.choice(equations_settings.settings.get_functions_by_arity(1))
             D.nodes[node]["expr"] = f
         # functions with arity D.out_degree(node) + any arity
         else:
             D.nodes[node]["expr"] = np.random.choice(
-                equations_settings.functions_with_arity[0] + equations_settings.functions_with_arity.get(D.out_degree(node), [""])
+                equations_settings.settings.get_functions_by_arity(D.out_degree(node)) +
+                equations_settings.settings.get_functions_by_arity(None)
             )
 
     return D
@@ -72,6 +71,7 @@ class _Enumerate:
 def enumerate_constants_in_expression(expr: str, base=equations_settings.CONST_BASE_NAME):
     """
     const + x0**const -> const_1 + x0**const_2
+    :param base:
     :param expr: str
     :return:
     """
@@ -82,7 +82,7 @@ def enumerate_constants_in_expression(expr: str, base=equations_settings.CONST_B
 def enumerate_vars_in_expression(expr: str):
     symbols = re.findall(r"Symbol\((.*?)\)", expr)
     symbols = [symbol[1:-1] for symbol in symbols if "x" in symbol]
-    symbols= list(set(symbols))
+    symbols = list(set(symbols))
     symbols = sorted(symbols, key=lambda x: float(x.strip(equations_settings.VARS_BASE_NAME)))
     map_variables = {old_symbol: "{}{}".format(equations_settings.VARS_BASE_NAME, i) for i, old_symbol in enumerate(symbols)}
     for old_symbol, new_symbol in map_variables.items():
@@ -114,6 +114,7 @@ def graph_to_expression(D, node=0):
             symbols = re.findall(r'Symbol\((.*?)\)', expr)
             if len(symbols) and all([equations_settings.CONST_BASE_NAME in symbol for symbol in symbols]):
                 expr = construct_symbol(equations_settings.CONST_BASE_NAME)
+            # TODO: to do the same with numerical constants, i.e. if atoms == 0
         else:
             # None => assuming that arity == 1
             # and thus we do not nest it
@@ -206,11 +207,13 @@ def expr_to_infix(expr, mul_add_arity_fixed=False):
     return pre, pre_arity
 
 
-def postfix_to_expr(post, post_arity):
+def postfix_to_expr(post, post_arity=None):
     """
     Returns expression from polish notation
     https://en.wikipedia.org/wiki/Shunting-yard_algorithm
     """
+    from sympy.core.function import arity as get_arity
+
     stack = []
 
     def symbol_or_constant(x):
@@ -218,6 +221,16 @@ def postfix_to_expr(post, post_arity):
             return "Symbol('{}')".format(x)
         else:
             return str(x)
+
+    if post_arity is None:
+        post_arity = []
+        for arg in post:
+            func = snp.sympify(arg)
+            arity = get_arity(func)
+            if arity is None:
+                post_arity.append(2)
+            else:
+                post_arity.append(arity)
 
     for arg, arg_arity in zip(post, post_arity):
         if arg_arity == 0:
@@ -235,4 +248,4 @@ def postfix_to_expr(post, post_arity):
             expr = "".join(expr)
             stack.append(expr)
 
-    return snp.sympify(stack[0])  # eval
+    return snp.sympify(stack[0])  #  eval

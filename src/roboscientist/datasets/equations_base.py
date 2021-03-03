@@ -7,8 +7,8 @@ import skopt
 from skopt import Space
 
 
-class BaseEquation(base.BaseProblem):
-    def __init__(self, expr, space=None):
+class Equation(base.BaseProblem):
+    def __init__(self, expr, space=None, mul_add_arity_fixed=None):
         """
         Transforms expr to
         :param expr:
@@ -17,6 +17,10 @@ class BaseEquation(base.BaseProblem):
         self._expr = expr
         self._lambdified_expr = lambdify(self.variables, expr)
         self._const_derivatives = dict()
+        if mul_add_arity_fixed:
+            self._mul_add_arity_fixed = mul_add_arity_fixed
+        else:
+            self._mul_add_arity_fixed = not equations_settings.settings.add_mul_arity_any
         for const in self.constants:
             derivative = snp.Derivative(expr, const, evaluate=True)
             lambdified_derivative = lambdify(self.variables, derivative)
@@ -48,7 +52,7 @@ class BaseEquation(base.BaseProblem):
     def subs(self, constants=None):
         # X_sympy = numpy_to_sympy_array(X, self)
         constants_sympy = numpy_to_sympy_constants(constants, self)
-        return BaseEquation(self._expr.subs(constants_sympy))
+        return Equation(self._expr.subs(constants_sympy))
 
     def derivative_wrt_constants(self, X, constants=None):
         X_sympy = numpy_to_sympy_array(X, self)
@@ -81,11 +85,14 @@ class BaseEquation(base.BaseProblem):
 
     @property
     def postfix(self):
-        return equations_utils.expr_to_postfix(self._expr)
+        return equations_utils.expr_to_postfix(self._expr, mul_add_arity_fixed=self._mul_add_arity_fixed)
 
     @property
     def infix(self):
-        return equations_utils.expr_to_infix(self._expr)
+        return equations_utils.expr_to_infix(self._expr, mul_add_arity_fixed=self._mul_add_arity_fixed)
+
+    def g(self):
+        return 4
 
     @property
     def free_variables(self):
@@ -104,7 +111,7 @@ class BaseEquation(base.BaseProblem):
         return _constants
 
 
-def numpy_to_sympy_array(X, equation: BaseEquation):
+def numpy_to_sympy_array(X, equation: Equation):
     X_sympy = dict()
     for variable in equation.free_variables:
         # TODO support 2D and 1D
@@ -112,7 +119,7 @@ def numpy_to_sympy_array(X, equation: BaseEquation):
     return X_sympy
 
 
-def numpy_to_sympy_constants(constants, equation: BaseEquation):
+def numpy_to_sympy_constants(constants, equation: Equation):
     constants_sympy = dict()
     for constant in equation.constants:
         # TODO support 2D and 1D
