@@ -15,8 +15,8 @@ def generate_polynomial(nodes=10, n_variables=1, space=((-5., 5.), )):
     :param n_variables:
     :return:
     """
-    with equations_settings.settings(functions=["Add", "Mul"], constants=[1]):
-        D = equations_utils.generate_random_tree_with_prior_on_arity(nodes, max_degree=2)
+    with equations_settings.settings(functions=["Add", "Mul"], constants=[1.], add_mul_arity_any=True):
+        D = equations_utils.generate_random_tree_with_prior_on_arity(nodes, max_degree=4)
         D = equations_utils.generate_random_formula_on_graph(D, n_symbols=n_variables)
         expr = equations_utils.graph_to_expression(D)
         # substract x_{n+1}
@@ -34,7 +34,7 @@ def generate_random_equation(nodes=10, n_variables=1, max_degree=3, space=((-5.,
     :param max_degree:
     :return:
     """
-    with equations_settings.settings(constants=[1]):
+    with equations_settings.settings(constants=[1.], add_mul_arity_any=True):
         D = equations_utils.generate_random_tree_with_prior_on_arity(nodes, max_degree=max_degree)
         D = equations_utils.generate_random_formula_on_graph(D, n_symbols=n_variables)
         expr = equations_utils.graph_to_expression(D)

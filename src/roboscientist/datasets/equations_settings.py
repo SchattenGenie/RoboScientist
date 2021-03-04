@@ -47,6 +47,7 @@ class EquationSettings(ContextDecorator):
 
         """
         if functions:
+            self._functions = {}
             for function in functions:
                 self._functions[function] = self._all_functions[function]
         self._add_mul_arity_any = add_mul_arity_any
@@ -70,12 +71,12 @@ class EquationSettings(ContextDecorator):
         """
         arity: int or None
         """
-        functions_with_requested_arity = []
-        for function in self._all_functions:
-            if self._all_functions[function].arity == arity:
-                functions_with_requested_arity.append(self._all_functions[function].repr)
-            elif (self._all_functions[function].arity is None) and (arity > 1) and (self._add_mul_arity_any):
-                functions_with_requested_arity.append(self._all_functions[function].repr)
+        functions_with_requested_arity = [None]
+        for function in self._functions:
+            if self._functions[function].arity == arity:
+                functions_with_requested_arity.append(self._functions[function].repr)
+            elif (self._functions[function].arity is None) and (arity > 1) and (self._add_mul_arity_any):
+                functions_with_requested_arity.append(self._functions[function].repr)
 
         return functions_with_requested_arity
 

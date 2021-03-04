@@ -1,8 +1,16 @@
 import sympy as snp
 import networkx as nx
 import numpy as np
+import torch
 import re
 from . import equations_settings
+import functools as ft
+
+
+def _reduce(fn):
+    def fn_(*args):
+        return ft.reduce(fn, args)
+    return fn_
 
 
 def construct_symbol(name):
@@ -119,7 +127,6 @@ def graph_to_expression(D, node=0):
             # None => assuming that arity == 1
             # and thus we do not nest it
             expr = graph_to_expression(D, node=list(D[node].keys())[0])
-
     if node == 0:
         # post-factum renumeration of consts and variables
         # firstly we use sympy to simplify expression
@@ -134,17 +141,46 @@ def graph_to_expression(D, node=0):
         return expr
 
 
+def _add_node(D, node_id, expr):
+    """
+
+    :param D:
+    :param node_id:
+    :param expr:
+    :return:
+    """
+    node = {}
+    if expr.is_constant():
+        node["node_type"] = snp.Float
+        node["value"] = torch.nn.Parameter(torch.tensor(float(expr)))
+        node["func"] = lambda: self._value
+        node["expr"] = str(expr)
+        # node["args"] = ()
+    elif expr.func.is_symbol:
+        node["node_type"] = snp.Symbol
+        node["symbol_name"] = expr.name
+        node["func"] = lambda value: value
+        node["expr"] = "Symbol('{}')".format(expr.name)
+    else:
+        node["node_type"] = expr.func
+        node["func"] = _func_lookup[expr.func]
+        node["expr"] = type(expr).__name__
+    D.add_node(node_id, **node)
+
+
 def expr_to_tree(expr, D=None, node=None):
+    """
+
+    :param expr:
+    :param D:
+    :param node:
+    :return:
+    """
     if D is None:
         D = nx.DiGraph()
         node = 0
 
-    if expr.func.is_symbol:
-        D.add_node(node, expr="Symbol('{}')".format(expr.name))
-    elif expr.is_Function or expr.is_Add or expr.is_Mul or expr.is_Pow:
-        D.add_node(node, expr=type(expr).__name__)
-    elif expr.is_constant():
-        D.add_node(node, expr=str(expr))
+    _add_node(D, node_id=node, expr=expr)
 
     parent_node = node
     for i, child in enumerate(expr.args):
@@ -152,6 +188,83 @@ def expr_to_tree(expr, D=None, node=None):
         D, node = expr_to_tree(child, D=D, node=node + 1)
 
     return D, node
+
+
+_func_lookup = {
+    snp.Mul: _reduce(torch.mul),
+    snp.Add: _reduce(torch.add),
+    snp.div: torch.div,
+    snp.Abs: torch.abs,
+    snp.sign: torch.sign,
+    # Note: May raise error for ints.
+    snp.ceiling: torch.ceil,
+    snp.floor: torch.floor,
+    snp.log: torch.log,
+    snp.exp: torch.exp,
+    snp.sqrt: torch.sqrt,
+    snp.cos: torch.cos,
+    snp.acos: torch.acos,
+    snp.sin: torch.sin,
+    snp.asin: torch.asin,
+    snp.tan: torch.tan,
+    snp.atan: torch.atan,
+    snp.atan2: torch.atan2,
+    # Note: Also may give NaN for complex results.
+    snp.cosh: torch.cosh,
+    snp.acosh: torch.acosh,
+    snp.sinh: torch.sinh,
+    snp.asinh: torch.asinh,
+    snp.tanh: torch.tanh,
+    snp.atanh: torch.atanh,
+    snp.Pow: torch.pow,
+    snp.re: torch.real,
+    snp.im: torch.imag,
+    snp.arg: torch.angle,
+    # Note: May raise error for ints and complexes
+    snp.erf: torch.erf,
+    snp.loggamma: torch.lgamma,
+    snp.Eq: torch.eq,
+    snp.Ne: torch.ne,
+    snp.StrictGreaterThan: torch.gt,
+    snp.StrictLessThan: torch.lt,
+    snp.LessThan: torch.le,
+    snp.GreaterThan: torch.ge,
+    snp.And: torch.logical_and,
+    snp.Or: torch.logical_or,
+    snp.Not: torch.logical_not,
+    snp.Max: torch.max,
+    snp.Min: torch.min,
+    # Matrices
+    snp.MatAdd: torch.add,
+    snp.HadamardProduct: torch.mul,
+    snp.Trace: torch.trace,
+    # Note: May raise error for integer matrices.
+    snp.Determinant: torch.det,
+}
+
+
+def torch_eval_graph(D, data, node=0):
+    """
+
+    :param D:
+    :param data:
+    :param node:
+    :return:
+    """
+    if D.out_degree(node) == 0:
+        if D.nodes[node]["node_type"] == snp.Float:
+            expr = D.nodes[node]['value']
+        elif D.nodes[node]["node_type"] == snp.Symbol:
+            expr = data[D.nodes[node]['symbol_name']]
+        else:
+            raise ValueError("wtf")
+    else:
+        if D.nodes[node]['expr']:
+            args = [torch_eval_graph(D, data=data, node=child) for child in D[node]]
+            expr = D.nodes[node]['func'](*args)
+            expr.retain_grad()
+    D.nodes[node]["layer_output"] = expr
+    return expr
 
 
 def expr_to_postfix(expr, mul_add_arity_fixed=False):
