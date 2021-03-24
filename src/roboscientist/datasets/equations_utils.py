@@ -16,7 +16,7 @@ def generate_random_tree_with_prior_on_arity(n=10, max_degree=3, degreeness=1):
     nums = np.arange(1, n + 1)
     prufer_sequence = [0]
     while len(prufer_sequence) < n:
-        # delete num with degree >= max_degree
+        # delete num with degree >construct_symbol= max_degree
         for val, count in zip(*np.unique(prufer_sequence, return_counts=True)):
             if count >= max_degree:
                 nums = np.delete(nums, np.argwhere(nums == val))
@@ -46,7 +46,10 @@ def generate_random_formula_on_graph(D, n_symbols):
                 D.nodes[node]["expr"] = str(np.random.choice(equations_settings.settings.constants))
         # functions of arity one
         elif D.out_degree(node) == 1:
-            f = np.random.choice(equations_settings.settings.get_functions_by_arity(1))
+            f = np.random.choice(
+                equations_settings.settings.get_functions_by_arity(1) +
+                equations_settings.settings.get_functions_by_arity(None)
+            )
             D.nodes[node]["expr"] = f
         # functions with arity D.out_degree(node) + any arity
         else:
@@ -90,9 +93,10 @@ def enumerate_vars_in_expression(expr: str):
     return expr
 
 
-def graph_to_expression(D, node=0):
+def graph_to_expression(D, node=0, return_str=True):
     """
     Converts graph to expression
+    :param return_str: if return snp.sympify or str
     :param D: nx.DiGraph, tree where each node has attribute `expr`
     :param node: int, root of tree (or subtree)
     :return:
@@ -108,30 +112,73 @@ def graph_to_expression(D, node=0):
                 ")"
             ]
             expr = "".join(expr)
-            # checking if expr contains constants only as symbols
-            # if so => rename it as one constant
-            # i.e. sin(const) -> const, e^{const + 5} -> const, etc.
-            symbols = re.findall(r'Symbol\((.*?)\)', expr)
-            if len(symbols) and all([equations_settings.CONST_BASE_NAME in symbol for symbol in symbols]):
-                expr = construct_symbol(equations_settings.CONST_BASE_NAME)
-            # TODO: to do the same with numerical constants, i.e. if atoms == 0
         else:
             # None => assuming that arity == 1
             # and thus we do not nest it
             expr = graph_to_expression(D, node=list(D[node].keys())[0])
 
     if node == 0:
-        # post-factum renumeration of consts and variables
-        # firstly we use sympy to simplify expression
-        expr = snp.simplify(snp.sympify(expr))  # eval
-        # secondly we numerate constants if any
-        expr = enumerate_constants_in_expression(snp.srepr(expr), base=equations_settings.CONST_BASE_NAME)
-        # thirdly we numerate variables in ascending order
-        expr = enumerate_vars_in_expression(snp.srepr(expr))
-
-        return snp.simplify(snp.sympify(expr))  # eval
+        if return_str:
+            return expr
+        else:
+            expr = snp.sympify(expr)  # eval
+            return expr
     else:
         return expr
+
+
+from collections import Counter
+
+
+def graph_simplification(D, node=0):
+    """
+    Simplifies graph
+    :param D: nx.DiGraph, tree where each node has attribute `expr`
+    :param node: int, root of tree (or subtree)
+    :return:
+    """
+    if D.out_degree(node) == 0:
+        expr = D.nodes[node]['expr']  # const, variable or float
+        counts = Counter()
+        if "x" in expr:
+            counts["variables"] += 1
+        elif "const" in expr:
+            counts["consts"] += 1
+        else:
+            counts["floats"] += 1
+    else:
+        expr = D.nodes[node]['expr']  # some operation like Add, Mull, cos
+
+        children = [(child, graph_simplification(D, node=child)) for child in D[node]]
+        counts = Counter()
+        for child, child_counts in children:
+            counts = counts + child_counts
+
+        # if only constants
+        if (counts["variables"] == 0 and counts["const"] != 0):
+            D.nodes[node]['expr'] = "Symbol('const')"
+            nodes_to_remove = list(D[node])
+            D.remove_nodes_from(nodes_to_remove)
+
+        # if op == "Add" or or == "Mul"
+        elif expr == "Add" or expr == "Mul":
+            # find children with at least one const and any number of floats
+            children_with_const = [
+                (child, child_counts) for child, child_counts in children
+                if (child_counts["consts"] > 0 or child_counts["floats"] > 0) and child_counts["variables"] == 0
+            ]
+            children_with_const_count = sum([x for _, x in children_with_const], start=Counter())
+            if children_with_const_count["consts"] > 0:
+                new_child = children_with_const[0][0]  # take node id of first child
+                nodes_to_remove = [x[0] for x in children_with_const]
+                D.remove_nodes_from(nodes_to_remove)
+                D.add_node(new_child, expr="Symbol('const')")
+                D.add_edge(node, new_child)
+        children = [(child, graph_simplification(D, node=child)) for child in D[node]]
+        counts = Counter()
+        for child, child_counts in children:
+            counts = counts + child_counts
+    return counts
 
 
 def expr_to_tree(expr, D=None, node=None):
@@ -150,7 +197,6 @@ def expr_to_tree(expr, D=None, node=None):
     for i, child in enumerate(expr.args):
         D.add_edge(parent_node, node + 1)
         D, node = expr_to_tree(child, D=D, node=node + 1)
-
     return D, node
 
 

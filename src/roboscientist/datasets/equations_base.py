@@ -10,8 +10,10 @@ from skopt import Space
 class Equation(base.BaseProblem):
     def __init__(self, expr, space=None, mul_add_arity_fixed=None):
         """
-        Transforms expr to
+
         :param expr:
+        :param space:
+        :param mul_add_arity_fixed: if True => Mul and Add have two arguments at max
         """
         from sympy.utilities.lambdify import lambdify
         self._expr = expr
