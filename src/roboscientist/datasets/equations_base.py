@@ -1,5 +1,6 @@
 from . import base
 from . import equations_utils
+from . import equations_torch_utils
 from . import equations_settings
 import sympy as snp
 import numpy as np
@@ -18,11 +19,16 @@ class Equation(base.BaseProblem):
         from sympy.utilities.lambdify import lambdify
         self._expr = expr
         self._lambdified_expr = lambdify(self.variables, expr)
-        self._const_derivatives = dict()
+
+        graph = equations_utils.expr_to_graph(expr)[0]
+        self._graph = equations_torch_utils.TorchGraph(graph=graph)
+
         if mul_add_arity_fixed:
             self._mul_add_arity_fixed = mul_add_arity_fixed
         else:
             self._mul_add_arity_fixed = not equations_settings.settings.add_mul_arity_any
+
+        self._const_derivatives = dict()
         for const in self.constants:
             derivative = snp.Derivative(expr, const, evaluate=True)
             lambdified_derivative = lambdify(self.variables, derivative)
@@ -33,6 +39,7 @@ class Equation(base.BaseProblem):
             derivative = snp.Derivative(expr, variable, evaluate=True)
             lambdified_derivative = lambdify(self.variables, derivative)
             self._free_variable_derivatives[variable.name] = lambdified_derivative
+
         super().__init__(space)
 
     def _init_dataset(self):
@@ -68,6 +75,13 @@ class Equation(base.BaseProblem):
         return NotImplemented("")
 
     def func(self, X, constants=None):
+        """
+
+        :param X:
+        :param constants:
+        :return:
+        """
+        # TODO: use self._graph functionality?
         X_sympy = numpy_to_sympy_array(X, self)
         constants_sympy = numpy_to_sympy_constants(constants, self)
         return self._lambdified_expr(**X_sympy, **constants_sympy)
@@ -86,8 +100,13 @@ class Equation(base.BaseProblem):
         return self._expr
 
     @property
+    def postfix_grad(self):
+        return equations_utils.graph_to_postfix_grad(self._graph, mul_add_arity_fixed=self._mul_add_arity_fixed)
+
+    @property
     def postfix(self):
-        return equations_utils.expr_to_postfix(self._expr, mul_add_arity_fixed=self._mul_add_arity_fixed)
+        return equations_utils.graph_to_postfix(self._graph, mul_add_arity_fixed=self._mul_add_arity_fixed)
+        # return equations_utils.expr_to_postfix(self._expr, mul_add_arity_fixed=self._mul_add_arity_fixed)
 
     @property
     def infix(self):

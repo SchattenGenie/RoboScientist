@@ -4,13 +4,8 @@ import numpy as np
 import torch
 import re
 from . import equations_settings
-import functools as ft
-
-
-def _reduce(fn):
-    def fn_(*args):
-        return ft.reduce(fn, args)
-    return fn_
+from roboscientist.datasets import equations_torch_utils
+from collections import Counter
 
 
 def construct_symbol(name):
@@ -101,7 +96,7 @@ def enumerate_vars_in_expression(expr: str):
     return expr
 
 
-def graph_to_expression(D, node=0, return_str=True):
+def graph_to_expr(D, node=0, return_str=True):
     """
     Converts graph to expression
     :param return_str: if return snp.sympify or str
@@ -116,14 +111,14 @@ def graph_to_expression(D, node=0, return_str=True):
             expr = [
                 D.nodes[node]['expr'],
                 "(",
-                ",".join([graph_to_expression(D, node=child) for child in D[node]]),
+                ",".join([graph_to_expr(D, node=child) for child in D[node]]),
                 ")"
             ]
             expr = "".join(expr)
         else:
             # None => assuming that arity == 1
             # and thus we do not nest it
-            expr = graph_to_expression(D, node=list(D[node].keys())[0])
+            expr = graph_to_expr(D, node=list(D[node].keys())[0])
     if node == 0:
         if return_str:
             return expr
@@ -132,9 +127,6 @@ def graph_to_expression(D, node=0, return_str=True):
             return expr
     else:
         return expr
-
-
-from collections import Counter
 
 
 def graph_simplification(D, node=0):
@@ -188,34 +180,7 @@ def graph_simplification(D, node=0):
     return counts
 
 
-def _add_node(D, node_id, expr):
-    """
-
-    :param D:
-    :param node_id:
-    :param expr:
-    :return:
-    """
-    node = {}
-    if expr.is_constant():
-        node["node_type"] = snp.Float
-        node["value"] = torch.nn.Parameter(torch.tensor(float(expr)))
-        node["func"] = lambda: self._value
-        node["expr"] = str(expr)
-        # node["args"] = ()
-    elif expr.func.is_symbol:
-        node["node_type"] = snp.Symbol
-        node["symbol_name"] = expr.name
-        node["func"] = lambda value: value
-        node["expr"] = "Symbol('{}')".format(expr.name)
-    else:
-        node["node_type"] = expr.func
-        node["func"] = _func_lookup[expr.func]
-        node["expr"] = type(expr).__name__
-    D.add_node(node_id, **node)
-
-
-def expr_to_tree(expr, D=None, node=None):
+def expr_to_graph(expr, D=None, node=None):
     """
 
     :param expr:
@@ -227,90 +192,65 @@ def expr_to_tree(expr, D=None, node=None):
         D = nx.DiGraph()
         node = 0
 
-    _add_node(D, node_id=node, expr=expr)
+    # add node selects correct type of node (function, float or variable)
+    # and adds torch functionality
+    equations_torch_utils._add_node(D, node_id=node, expr=expr)
 
     parent_node = node
     for i, child in enumerate(expr.args):
         D.add_edge(parent_node, node + 1)
-        D, node = expr_to_tree(child, D=D, node=node + 1)
+        D, node = expr_to_graph(child, D=D, node=node + 1)
     return D, node
 
 
-_func_lookup = {
-    snp.Mul: _reduce(torch.mul),
-    snp.Add: _reduce(torch.add),
-    snp.div: torch.div,
-    snp.Abs: torch.abs,
-    snp.sign: torch.sign,
-    # Note: May raise error for ints.
-    snp.ceiling: torch.ceil,
-    snp.floor: torch.floor,
-    snp.log: torch.log,
-    snp.exp: torch.exp,
-    snp.sqrt: torch.sqrt,
-    snp.cos: torch.cos,
-    snp.acos: torch.acos,
-    snp.sin: torch.sin,
-    snp.asin: torch.asin,
-    snp.tan: torch.tan,
-    snp.atan: torch.atan,
-    snp.atan2: torch.atan2,
-    # Note: Also may give NaN for complex results.
-    snp.cosh: torch.cosh,
-    snp.acosh: torch.acosh,
-    snp.sinh: torch.sinh,
-    snp.asinh: torch.asinh,
-    snp.tanh: torch.tanh,
-    snp.atanh: torch.atanh,
-    snp.Pow: torch.pow,
-    snp.re: torch.real,
-    snp.im: torch.imag,
-    snp.arg: torch.angle,
-    # Note: May raise error for ints and complexes
-    snp.erf: torch.erf,
-    snp.loggamma: torch.lgamma,
-    snp.Eq: torch.eq,
-    snp.Ne: torch.ne,
-    snp.StrictGreaterThan: torch.gt,
-    snp.StrictLessThan: torch.lt,
-    snp.LessThan: torch.le,
-    snp.GreaterThan: torch.ge,
-    snp.And: torch.logical_and,
-    snp.Or: torch.logical_or,
-    snp.Not: torch.logical_not,
-    snp.Max: torch.max,
-    snp.Min: torch.min,
-    # Matrices
-    snp.MatAdd: torch.add,
-    snp.HadamardProduct: torch.mul,
-    snp.Trace: torch.trace,
-    # Note: May raise error for integer matrices.
-    snp.Determinant: torch.det,
-}
-
-
-def torch_eval_graph(D, data, node=0):
+def graph_to_postfix(graph, mul_add_arity_fixed=False):
+    """
+    Returns postorder traversal (i.e. in polish notation) of the symbolic expression
     """
 
-    :param D:
-    :param data:
-    :param node:
-    :return:
-    """
-    if D.out_degree(node) == 0:
-        if D.nodes[node]["node_type"] == snp.Float:
-            expr = D.nodes[node]['value']
-        elif D.nodes[node]["node_type"] == snp.Symbol:
-            expr = data[D.nodes[node]['symbol_name']]
+    post = []
+    post_arity = []
+    for node in nx.dfs_postorder_nodes(graph):
+        if graph.nodes[node]['node_type'] == snp.Float:
+            post.append(graph.nodes[node]['value'].item())
+            post_arity.append(0)
+        elif graph.nodes[node]['node_type'] == snp.Symbol:
+            post.append(graph.nodes[node]['symbol_name'])
+            post_arity.append(0)
         else:
-            raise ValueError("wtf")
-    else:
-        if D.nodes[node]['expr']:
-            args = [torch_eval_graph(D, data=data, node=child) for child in D[node]]
-            expr = D.nodes[node]['func'](*args)
-            expr.retain_grad()
-    D.nodes[node]["layer_output"] = expr
-    return expr
+            if mul_add_arity_fixed and (graph.nodes[node]['node_type'] == snp.Add or graph.nodes[node]['node_type'] == snp.Mul):
+                for i in range(graph.out_degree[node] - 1):
+                    post.append(graph.nodes[node]['node_type'].__name__)
+                    post_arity.append(2)
+            else:
+                post.append(graph.nodes[node]['node_type'].__name__)
+                post_arity.append(graph.out_degree[node])
+    return post, post_arity
+
+
+def graph_to_postfix_grad(graph, mul_add_arity_fixed=False):
+    """
+    Returns postorder traversal (i.e. in polish notation) of the symbolic expression
+    """
+
+    post = []
+    post_arity = []
+    for node in nx.dfs_postorder_nodes(graph):
+        if graph.nodes[node]['node_type'] == snp.Float:
+            post.append(graph.nodes[node]['layer_output'].grad)
+            post_arity.append(0)
+        elif graph.nodes[node]['node_type'] == snp.Symbol:
+            post.append(graph.nodes[node]['layer_output'].grad)
+            post_arity.append(0)
+        else:
+            if mul_add_arity_fixed and (graph.nodes[node]['node_type'] == snp.Add or graph.nodes[node]['node_type'] == snp.Mul):
+                for i in range(graph.out_degree[node] - 1):
+                    post.append(graph.nodes[node]['layer_output'].grad)
+                    post_arity.append(2)
+            else:
+                post.append(graph.nodes[node]['layer_output'].grad)
+                post_arity.append(graph.out_degree[node])
+    return post, post_arity
 
 
 def expr_to_postfix(expr, mul_add_arity_fixed=False):
@@ -407,4 +347,4 @@ def postfix_to_expr(post, post_arity=None):
             expr = "".join(expr)
             stack.append(expr)
 
-    return snp.sympify(stack[0])  #  eval
+    return snp.sympify(stack[0])  # eval

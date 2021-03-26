@@ -17,13 +17,13 @@ def generate_polynomial(nodes=10, n_variables=1, space=((-5., 5.),)):
     :return:
     """
     with equations_settings.settings(functions=["Add", "Mul"], constants=[1.]):
-        D = equations_utils.generate_random_tree_with_prior_on_arity(nodes, max_degree=max_degree)
+        D = equations_utils.generate_random_tree_with_prior_on_arity(nodes, max_degree=2)
         D = equations_utils.generate_random_formula_on_graph(D, n_symbols=n_variables)
 
-        expr = equations_utils.graph_to_expression(D, return_str=False)
-        D, _ = equations_utils.expr_to_tree(expr)
+        expr = equations_utils.graph_to_expr(D, return_str=False)
+        D, _ = equations_utils.expr_to_graph(expr)
         equations_utils.graph_simplification(D)
-        expr = equations_utils.graph_to_expression(D, return_str=True)
+        expr = equations_utils.graph_to_expr(D, return_str=True)
         expr = equations_utils.enumerate_constants_in_expression(expr)
         expr = equations_utils.enumerate_vars_in_expression(expr)
         expr = snp.sympify(expr)
@@ -43,10 +43,10 @@ def generate_random_equation(nodes=10, n_variables=1, max_degree=3, space=((-5.,
         D = equations_utils.generate_random_tree_with_prior_on_arity(nodes, max_degree=max_degree)
         D = equations_utils.generate_random_formula_on_graph(D, n_symbols=n_variables)
 
-        expr = equations_utils.graph_to_expression(D, return_str=False)
-        D, _ = equations_utils.expr_to_tree(expr)
+        expr = equations_utils.graph_to_expr(D, return_str=False)
+        D, _ = equations_utils.expr_to_graph(expr)
         equations_utils.graph_simplification(D)
-        expr = equations_utils.graph_to_expression(D, return_str=True)
+        expr = equations_utils.graph_to_expr(D, return_str=True)
         expr = equations_utils.enumerate_constants_in_expression(expr)
         expr = equations_utils.enumerate_vars_in_expression(expr)
         expr = snp.sympify(expr)
