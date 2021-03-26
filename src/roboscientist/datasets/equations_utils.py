@@ -1,8 +1,11 @@
 import sympy as snp
 import networkx as nx
 import numpy as np
+import torch
 import re
 from . import equations_settings
+from roboscientist.datasets import equations_torch_utils
+from collections import Counter
 
 
 def construct_symbol(name):
@@ -93,7 +96,7 @@ def enumerate_vars_in_expression(expr: str):
     return expr
 
 
-def graph_to_expression(D, node=0, return_str=True):
+def graph_to_expr(D, node=0, return_str=True):
     """
     Converts graph to expression
     :param return_str: if return snp.sympify or str
@@ -108,15 +111,14 @@ def graph_to_expression(D, node=0, return_str=True):
             expr = [
                 D.nodes[node]['expr'],
                 "(",
-                ",".join([graph_to_expression(D, node=child) for child in D[node]]),
+                ",".join([graph_to_expr(D, node=child) for child in D[node]]),
                 ")"
             ]
             expr = "".join(expr)
         else:
             # None => assuming that arity == 1
             # and thus we do not nest it
-            expr = graph_to_expression(D, node=list(D[node].keys())[0])
-
+            expr = graph_to_expr(D, node=list(D[node].keys())[0])
     if node == 0:
         if return_str:
             return expr
@@ -125,9 +127,6 @@ def graph_to_expression(D, node=0, return_str=True):
             return expr
     else:
         return expr
-
-
-from collections import Counter
 
 
 def graph_simplification(D, node=0):
@@ -181,23 +180,77 @@ def graph_simplification(D, node=0):
     return counts
 
 
-def expr_to_tree(expr, D=None, node=None):
+def expr_to_graph(expr, D=None, node=None):
+    """
+
+    :param expr:
+    :param D:
+    :param node:
+    :return:
+    """
     if D is None:
         D = nx.DiGraph()
         node = 0
 
-    if expr.func.is_symbol:
-        D.add_node(node, expr="Symbol('{}')".format(expr.name))
-    elif expr.is_Function or expr.is_Add or expr.is_Mul or expr.is_Pow:
-        D.add_node(node, expr=type(expr).__name__)
-    elif expr.is_constant():
-        D.add_node(node, expr=str(expr))
+    # add node selects correct type of node (function, float or variable)
+    # and adds torch functionality
+    equations_torch_utils._add_node(D, node_id=node, expr=expr)
 
     parent_node = node
     for i, child in enumerate(expr.args):
         D.add_edge(parent_node, node + 1)
-        D, node = expr_to_tree(child, D=D, node=node + 1)
+        D, node = expr_to_graph(child, D=D, node=node + 1)
     return D, node
+
+
+def graph_to_postfix(graph, mul_add_arity_fixed=False):
+    """
+    Returns postorder traversal (i.e. in polish notation) of the symbolic expression
+    """
+
+    post = []
+    post_arity = []
+    for node in nx.dfs_postorder_nodes(graph):
+        if graph.nodes[node]['node_type'] == snp.Float:
+            post.append(graph.nodes[node]['value'].item())
+            post_arity.append(0)
+        elif graph.nodes[node]['node_type'] == snp.Symbol:
+            post.append(graph.nodes[node]['symbol_name'])
+            post_arity.append(0)
+        else:
+            if mul_add_arity_fixed and (graph.nodes[node]['node_type'] == snp.Add or graph.nodes[node]['node_type'] == snp.Mul):
+                for i in range(graph.out_degree[node] - 1):
+                    post.append(graph.nodes[node]['node_type'].__name__)
+                    post_arity.append(2)
+            else:
+                post.append(graph.nodes[node]['node_type'].__name__)
+                post_arity.append(graph.out_degree[node])
+    return post, post_arity
+
+
+def graph_to_postfix_grad(graph, mul_add_arity_fixed=False):
+    """
+    Returns postorder traversal (i.e. in polish notation) of the symbolic expression
+    """
+
+    post = []
+    post_arity = []
+    for node in nx.dfs_postorder_nodes(graph):
+        if graph.nodes[node]['node_type'] == snp.Float:
+            post.append(graph.nodes[node]['layer_output'].grad)
+            post_arity.append(0)
+        elif graph.nodes[node]['node_type'] == snp.Symbol:
+            post.append(graph.nodes[node]['layer_output'].grad)
+            post_arity.append(0)
+        else:
+            if mul_add_arity_fixed and (graph.nodes[node]['node_type'] == snp.Add or graph.nodes[node]['node_type'] == snp.Mul):
+                for i in range(graph.out_degree[node] - 1):
+                    post.append(graph.nodes[node]['layer_output'].grad)
+                    post_arity.append(2)
+            else:
+                post.append(graph.nodes[node]['layer_output'].grad)
+                post_arity.append(graph.out_degree[node])
+    return post, post_arity
 
 
 def expr_to_postfix(expr, mul_add_arity_fixed=False):
@@ -294,4 +347,4 @@ def postfix_to_expr(post, post_arity=None):
             expr = "".join(expr)
             stack.append(expr)
 
-    return snp.sympify(stack[0])  #  eval
+    return snp.sympify(stack[0])  # eval

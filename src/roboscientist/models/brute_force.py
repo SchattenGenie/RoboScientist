@@ -78,7 +78,7 @@ def brute_force_equation_generator(n_max=5, n_symbols=2):
             for exprs in itertools.product(*possible_mappers):
                 for node in D.nodes:
                     D.nodes[node]["expr"] = exprs[node]
-                equation = equations_base.Equation(equations_utils.graph_to_expression(D))
+                equation = equations_base.Equation(equations_utils.graph_to_expr(D))
                 yield equation
 
 
