@@ -17,7 +17,7 @@ class EquationSettings(ContextDecorator):
         from sympy.core.function import arity as get_arity
         functions = ["sin", "cos", "sqrt", "Pow", "Add", "Mul"]
         self._all_functions = {}
-        self._all_constants = [1, "Symbol('{}')".format(CONST_BASE_NAME)]
+        self._all_constants = [1., "Symbol('{}')".format(CONST_BASE_NAME)]
         for function in functions:
             func = snp.sympify(function)
             self._all_functions[function] = sympy_function(
@@ -42,7 +42,7 @@ class EquationSettings(ContextDecorator):
     def add_mul_arity_any(self):
         return self._add_mul_arity_any
 
-    def __call__(self, functions: List = None, constants: List = None, add_mul_arity_any: bool = False):
+    def __call__(self, functions: List = None, constants: List = None, add_mul_arity_any: bool = True):
         """
 
         """
@@ -71,11 +71,11 @@ class EquationSettings(ContextDecorator):
         """
         arity: int or None
         """
-        functions_with_requested_arity = [None]
+        functions_with_requested_arity = []
         for function in self._functions:
-            if self._functions[function].arity == arity:
+            if self._all_functions[function].arity == arity:
                 functions_with_requested_arity.append(self._functions[function].repr)
-            elif (self._functions[function].arity is None) and (arity > 1) and (self._add_mul_arity_any):
+            elif (self._all_functions[function].arity is None) and (arity > 1) and (self._add_mul_arity_any):
                 functions_with_requested_arity.append(self._functions[function].repr)
 
         return functions_with_requested_arity
