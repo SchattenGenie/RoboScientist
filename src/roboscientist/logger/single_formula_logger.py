@@ -13,13 +13,11 @@ class SingleFormulaLogger(BaseLogger):
 
         logger = SingleFormulaLogger(project_name='project_name',
                                      experiment_name='experiment_name',
-                                     experiment_config={},
-                                     X=np.array([1, 2, 5]).reshape(-1, 1),
-                                     y=np.array([2, 4, 10]))
+                                     experiment_config={})
 
     Then each time new candidate equations are generated, add them to the logger:
 
-        logger.log_metrics(equations)
+        logger.log_metrics(reference_problem, equations)
 
     At the end of each epoch commit the metrics:
 
@@ -28,6 +26,8 @@ class SingleFormulaLogger(BaseLogger):
         If you want, you can add your own metrics:
 
             logger.commit_metrics(custom_log)
+
+    An example of using this logger can be found in examples/logger/single_formula_logger_example.ipynb
     """
     def __init__(self, project_name, experiment_name, experiment_config,
                  n_best_equations_to_store=500, evaluation_dataset_size=1000):
