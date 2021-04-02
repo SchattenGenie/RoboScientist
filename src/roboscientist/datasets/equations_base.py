@@ -70,7 +70,10 @@ class Equation(base.BaseProblem):
     def func(self, X, constants=None):
         X_sympy = numpy_to_sympy_array(X, self)
         constants_sympy = numpy_to_sympy_constants(constants, self)
-        return self._lambdified_expr(**X_sympy, **constants_sympy)
+        res = self._lambdified_expr(**X_sympy, **constants_sympy)
+        if isinstance(res, float) or isinstance(res, int):
+            res = [res] * len(X)
+        return res
 
     def __call__(self, X, constants=None):
         return self.func(X, constants)
