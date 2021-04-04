@@ -1,0 +1,1 @@
+15 formulae (Nguyen-{1..15}, Constant-{1..3}) from https://arxiv.org/abs/1912.04871
