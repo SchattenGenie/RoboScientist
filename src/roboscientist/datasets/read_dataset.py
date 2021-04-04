@@ -9,7 +9,9 @@ import pandas as pd
 def _str_to_equation(row):
     formula, domain_0, domain_1 = row
     expr = sp.parse_expr(formula)
-    return Equation(expr, space=[[domain_0, domain_1]])
+    space = [[float(domain_0), float(domain_1)]]
+    
+    return Equation(expr, space=space)
 
 def read_dataset(path):
     df_formulae = pd.read_csv(Path(path) / 'formulae.csv', header=None, index_col=0, names=['index', 'formula', 'domain_0', 'domain_1'])
