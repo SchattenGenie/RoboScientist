@@ -327,4 +327,4 @@ def infix_to_expr(pre, pre_arity=None, evaluate=True):
     post_arity = copy(pre_arity)
     if post_arity is not None:
         post_arity = post_arity[::-1]
-    return postfix_to_expr(pre[::-1], post_arity
+    return postfix_to_expr(pre[::-1], post_arity)
