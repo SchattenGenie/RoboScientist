@@ -154,12 +154,10 @@ class VAESolver(BaseSolver):
                     valid_formulas.append(line.strip())
                     valid_mses.append(mean_squared_error(y, self.ys))
                     valid_equations.append(f_to_eval)
-                    # print('try', valid_mses[-1])
                 except:
-                    print('except', line.split())
+                    continue
 
-        self.stats.save_best_samples(sampled_mses=valid_mses, sampled_formulas=valid_formulas, wandb_log=None,
-                                  epoch=epoch)
+        self.stats.save_best_samples(sampled_mses=valid_mses, sampled_formulas=valid_formulas)
 
         self.stats.write_last_n_to_file(self.params.file_to_sample)
 
@@ -237,10 +235,8 @@ class FormulaStatistics:
         self.last_n_best_formulas = self.last_n_best_formulas[s:]
         self.last_n_best_mses = self.last_n_best_mses[s:]
 
-    def save_best_samples(self, sampled_mses, sampled_formulas, wandb_log, epoch):
-        # TODO(julia): change
-        mse_threshold = 10e10
-        # mse_threshold = np.nanpercentile(sampled_mses + self.last_n_best_mses, self.percentile)
+    def save_best_samples(self, sampled_mses, sampled_formulas):
+        mse_threshold = np.nanpercentile(sampled_mses + self.last_n_best_mses, self.percentile)
         epoch_best_mses = [x for x in sampled_mses if x < mse_threshold]
         epoch_best_formulas = [
             sampled_formulas[i] for i in range(len(sampled_formulas)) if sampled_mses[i] < mse_threshold]
