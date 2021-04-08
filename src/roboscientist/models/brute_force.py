@@ -12,13 +12,12 @@ class BruteForceSolver(BaseSolver):
         self._max_time = max_time
         super().__init__(logger, *args, **kwargs)
 
-    def _training_step(self, equations: Dataset) -> Dataset:
+    def _training_step(self, equation: Dataset, epoch) -> Dataset:
         candidate_solutions = []
-        for equation in equations:
-            X, y = equation.dataset
-            # TODO: restart not from the start (generator)
-            candidate_solution = brute_force_solver(X, y, max_time=self._max_time)
-            candidate_solutions.append(candidate_solution)
+        X, y = equation.dataset
+        # TODO: restart not from the start (generator)
+        candidate_solution = brute_force_solver(X, y, max_time=self._max_time)
+        candidate_solutions.append(candidate_solution)
         return Dataset(candidate_solutions)
 
 
