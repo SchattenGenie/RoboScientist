@@ -1,6 +1,7 @@
 # TODO(julia): delete or rewrite this file
 
 import random
+import numpy as np
 
 
 VARIABLES = {"Symbol('x0')", "1.0"}
@@ -38,8 +39,11 @@ def generate_formula(all_tokens, max_len):
 def generate_pretrain_dataset(size, max_len, file=None):
     all_tokens = ['cos', 'sin', 'Add', 'Mul', "Symbol('x0')"]
     formulas = []
-    for _ in range(size):
-        formulas.append(generate_formula(all_tokens, max_len))
+    while len(formulas) < size:
+        formulas += [generate_formula(all_tokens, max_len) for _ in range(size)]
+        formulas = list(np.unique(formulas))
+        print(len(formulas))
+        formulas = formulas[:size]
 
     if file is not None:
         with open(file, 'w') as f:
@@ -48,5 +52,5 @@ def generate_pretrain_dataset(size, max_len, file=None):
 
 
 if __name__ == '__main__':
-    generate_pretrain_dataset(20000, 12, 'train')
-    generate_pretrain_dataset(10000, 12, 'val')
+    generate_pretrain_dataset(20000, 14, 'train')
+    generate_pretrain_dataset(10000, 14, 'val')
