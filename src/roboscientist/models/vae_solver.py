@@ -13,41 +13,64 @@ import numpy as np
 VAESolverParams = namedtuple(
     'VAESolverParams', [
         # model parameters
-        'model_params',
+        'model_params',                             # Dict with model parameters. Must include: token_embedding_dim,
+                                                    #  hidden_dim, encoder_layers_cnt, decoder_layers_cnt, latent_dim,
+                                                    # x_dim
+
         # formula parameters
-        'max_formula_length',
-        'max_degree',
-        'functions',
-        'arities',  # TODO(julia): remove arities
-        'optimizable_constants',
-        'float_constants',
-        'free_variables',
+        'max_formula_length',                       # Int: Maximum length of a formula
+        'max_degree',                               # Int: Max arity of a formula operator
+        'functions',                                # List: A list of finctions used in formula
+        # TODO(julia): remove arities
+        'arities',                                  # Dict: A dict of arities of the functions.
+                                                    # For each f in function arity must be provided
+        'optimizable_constants',                    # List: Tokens of optimizable constants. Example: Symbol('const0')
+        'float_constants',                          # List: a list of float constants used by the solver
+        'free_variables',                           # List: a list of free variables used by the solver.
+                                                    # Example: Symbol('x0')
+
         # training parameters
-        'n_pretrain_steps',
-        'batch_size',
-        'n_pretrain_formulas',
-        'create_pretrain_dataset',
-        'kl_coef',
-        'device',
-        'learning_rate',
-        'betas',
-        'use_n_last_steps',
-        'percentile',
-        'n_formulas_to_sample',
-        'add_noise_to_model_params',
-        'noise_coef',
-        'add_noise_every_n_steps',
+        'n_pretrain_steps',                         # Int: number of pretrain epochs (number of times the model will be
+                                                    # trained on the fixed train dataset)
+        'batch_size',                               # Int: batch size
+        'n_pretrain_formulas',                      # Int: Number of formulas in pretrain dataset. If a train file is
+                                                    # provided, this parameter will be ignored
+        'create_pretrain_dataset',                  # Bool: Whether to create a pretrain dataset. If False, train
+                                                    # dataset must  be provided. see: pretrain_train_file,
+                                                    # pretrain_val_file
+        'kl_coef',                                  # Float: Coefficient of KL-divergence in model loss
+        'device',                                   # Device: cuda or cpu
+        'learning_rate',                            # Float: learning rate
+        'betas',                                    # Tuple(float, float): Adam parameter
+        'use_n_last_steps',                         # Int: Use best formulas generated on last |use_n_last_steps| epochs
+                                                    # for training and for percentile calculation
+        'percentile',                               # Int: Use |percentile| best formulas for retraining
+        'n_formulas_to_sample',                     # Int: Number of formulas to sample on each epochs
+        'add_noise_to_model_params',                # Bool: Whether to add noise to model parameters
+        'noise_coef',                               # Float: Noise coefficient.
+                                                    # model weights = model weights + |noise_coef| * noise
+        'add_noise_every_n_steps',                  # Int: Add noise to model on every |add_noise_every_n_steps| epoch
+
         # files
-        'file_to_sample',
-        'pretrain_train_file',
-        'pretrain_val_file',
+        'file_to_sample',                           # Str: File to sample formulas to. Used for retraining stage
+        'pretrain_train_file',                      # Str: File with pretrain train formulas.
+                                                    # If not |create_pretrain_dataset|, this will be used to pretrain
+                                                    # the model. Otherwise generated pretrain dataset will be written
+                                                    # to this file
+        'pretrain_val_file',                        # Str: File with pretrain validation formulas.
+                                                    # If not |create_pretrain_dataset|, this will be used to pretrain
+                                                    # the model. Otherwise generated pretrain dataset will be written
+                                                    #  to this file
+
         # specific settings
-        'no_retrain',
-        'continue_training_on_pretrain_dataset',
+        'no_retrain',                               # Bool: if True, Don't retrain the model during the retraining phase
+        'continue_training_on_pretrain_dataset',    # Bool: if True, continue training the model on the pretrain dataset
+
         # data
-        'xs',
-        'ys',
+        'xs',                                       # numpy array: initial xs data
+        'ys',                                       # numpy array: initial ys data
     ])
+
 VAESolverParams.__new__.__defaults__ = (
     {'token_embedding_dim': 128, 'hidden_dim': 128, 'encoder_layers_cnt': 1,
      'decoder_layers_cnt': 1, 'latent_dim':  8, 'x_dim': 1},  # model_params
@@ -90,7 +113,6 @@ class VAESolver(BaseSolver):
             solver_params = VAESolverParams()
         self.params = solver_params
 
-        # TODO(julia): "Symbol('x0')" -> a better way to do this + adapt for multiple variables
         self._ind2token = self.params.functions + [str(c) for c in self.params.float_constants] + \
                           self.params.optimizable_constants + \
                           [config.START_OF_SEQUENCE, config.END_OF_SEQUENCE, config.PADDING] + \

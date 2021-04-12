@@ -1,5 +1,7 @@
 # TODO(julia): delete or rewrite this file
 
+import formula_infix_utils
+
 import random
 import numpy as np
 
@@ -23,10 +25,14 @@ OPERATORS = {
 
 def generate_formula(all_tokens, max_len):
     while True:
+        const_ind = 0
         formula = []
         tokens_required = 1
         for _ in range(max_len):
             token = random.choice(all_tokens)
+            if 'const' in token:
+                token = token % const_ind
+                const_ind += 1
             formula.append(token)
             if token in OPERATORS:
                 tokens_required += (OPERATORS[token].arity - 1)
@@ -37,10 +43,15 @@ def generate_formula(all_tokens, max_len):
 
 
 def generate_pretrain_dataset(size, max_len, file=None):
-    all_tokens = ['cos', 'sin', 'Add', 'Mul', "Symbol('x0')"]
+    all_tokens = ['cos', 'sin', 'Add', 'Mul', "Symbol('x0')", "Symbol('const%d')"]
+    # all_tokens = ['cos', 'sin', 'Add', 'Mul', "Symbol('x0')"]
     formulas = []
     while len(formulas) < size:
-        formulas += [generate_formula(all_tokens, max_len) for _ in range(size)]
+        new_formulas = [generate_formula(all_tokens, max_len) for _ in range(size)]
+        new_formulas = [formula_infix_utils.clear_redundant_operations(
+            f.split(), ['cos', 'sin', 'Add', 'Mul'], {'cos': 1, 'sin': 1, 'Add': 2, 'Mul': 2}) for f in new_formulas]
+        new_formulas = [' '.join(f) for f in new_formulas]
+        formulas += new_formulas
         formulas = list(np.unique(formulas))
         print(len(formulas))
         formulas = formulas[:size]

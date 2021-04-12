@@ -141,6 +141,7 @@ def graph_to_expression(D, node=0, return_str=True):
             return expr
         else:
             expr = snp.sympify(expr)  # eval
+            return expr
     else:
         return expr
 

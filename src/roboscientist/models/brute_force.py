@@ -12,7 +12,7 @@ class BruteForceSolver(BaseSolver):
         self._max_time = max_time
         super().__init__(logger, *args, **kwargs)
 
-    def _training_step(self, equation: Dataset, epoch):
+    def _training_step(self, equation, epoch):
         candidate_solutions = []
         X, y = equation.dataset
         # TODO: restart not from the start (generator)

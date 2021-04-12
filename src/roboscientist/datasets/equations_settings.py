@@ -45,12 +45,7 @@ class EquationSettings(ContextDecorator):
 
     @property
     def constants(self):
-        # TODO: it's not convenient to add Symbol('{}') when defining custom constants
         return self._constants
-
-    @property
-    def tokens(self):
-        return list(self._functions) + [str(i) for i in self._constants]
 
     @property
     def add_mul_arity_any(self):
