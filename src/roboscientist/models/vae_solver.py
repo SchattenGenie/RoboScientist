@@ -1,6 +1,6 @@
 from roboscientist.datasets import equations_generation, Dataset, equations_utils, equations_base
 from .solver_base import BaseSolver
-from .vae_solver_lib import config, model, train, optimize_constants
+from .vae_solver_lib import config, model, train, optimize_constants, formula_infix_utils
 
 from sklearn.metrics import mean_squared_error
 
@@ -18,7 +18,10 @@ VAESolverParams = namedtuple(
         'max_formula_length',
         'max_degree',
         'functions',
-        'constants',
+        'arities',  # TODO(julia): remove arities
+        'optimizable_constants',
+        'float_constants',
+        'free_variables',
         # training parameters
         'n_pretrain_steps',
         'batch_size',
@@ -51,7 +54,10 @@ VAESolverParams.__new__.__defaults__ = (
     15,  # max_formula_length
     2,  # max_degree
     ['sin', 'cos', 'Add', 'Mul'],  # functions
-    [],  # constants
+    {'sin': 1, 'cos': 1, 'Add': 2, 'Mul': 2},  # arities
+    [],  # optimizable_constants
+    [],  # float constants
+    ["Symbol('x0')"],  # free variables
     50,  # n_pretrain_steps
     256,  # batch_size
     20000,  # n_pretrain_formulas
@@ -85,9 +91,10 @@ class VAESolver(BaseSolver):
         self.params = solver_params
 
         # TODO(julia): "Symbol('x0')" -> a better way to do this + adapt for multiple variables
-        self._ind2token = list(self.params.functions) + [str(c) for c in self.params.constants] + \
-                         [config.START_OF_SEQUENCE, config.END_OF_SEQUENCE, config.PADDING] + \
-                         ["Symbol('x0')"]
+        self._ind2token = self.params.functions + [str(c) for c in self.params.float_constants] + \
+                          self.params.optimizable_constants + \
+                          [config.START_OF_SEQUENCE, config.END_OF_SEQUENCE, config.PADDING] + \
+                          self.params.free_variables
         self._token2ind = {t: i for i, t in enumerate(self._ind2token)}
 
         if self.params.create_pretrain_dataset:
@@ -126,15 +133,16 @@ class VAESolver(BaseSolver):
                        pretrain_batches=self.pretrain_batches, pretrain_val_batches=self.valid_batches,
                        kl_coef=self.params.kl_coef)
 
-    def _training_step(self, equation, epoch) -> Dataset:
+    def _training_step(self, equation, epoch):
+        custom_log = {}
         self.stats.clear_the_oldest_step()
 
         noises = self._maybe_add_noise_to_model_params(epoch)
 
-        sample_res = self.model.sample(self.params.n_formulas_to_sample, self.params.max_formula_length,
+        self.model.sample(self.params.n_formulas_to_sample, self.params.max_formula_length,
                                        self.params.file_to_sample,
                                        Xs=self.cond_x,
-                                       ys=self.cond_y, ensure_valid=False)
+                                       ys=self.cond_y, ensure_valid=False, unique=True)
 
         self._maybe_remove_noise_from_model_params(epoch, noises)
 
@@ -144,18 +152,20 @@ class VAESolver(BaseSolver):
         with open(self.params.file_to_sample) as f:
             for line in f:
                 try:
-                    f_to_eval = equations_utils.infix_to_expr(line.strip().split())
+                    f_to_eval = formula_infix_utils.clear_redundant_operations(line.strip().split(),
+                                                                               self.params.functions,
+                                                                               self.params.arities)
+                    f_to_eval = [float(x) if x in self.params.float_constants else x for x in f_to_eval]
+                    f_to_eval = equations_utils.infix_to_expr(f_to_eval)
                     f_to_eval = equations_base.Equation(f_to_eval)
-                    # constants = optimize_constants.optimize_constants(f_to_eval, self.xs, self.ys)
-                    # TODO(julia): fix optimize constants here
-                    constants = None
-                    # TODO(julia): now it only works for variables, no constants
+                    constants = optimize_constants.optimize_constants(f_to_eval, self.xs, self.ys)
                     y = f_to_eval.func(self.xs.reshape(-1, 1), constants)
                     valid_formulas.append(line.strip())
                     valid_mses.append(mean_squared_error(y, self.ys))
-                    valid_equations.append(f_to_eval)
+                    valid_equations.append(f_to_eval.subs(constants))
                 except:
                     continue
+        custom_log['unique_valid_formulas_sampled_percentage'] = len(valid_formulas) / self.params.n_formulas_to_sample
 
         self.stats.save_best_samples(sampled_mses=valid_mses, sampled_formulas=valid_formulas)
 
@@ -173,7 +183,7 @@ class VAESolver(BaseSolver):
                            kl_coef=self.params.kl_coef)
 
         # TODO(julia) add active learning
-        return Dataset(valid_equations)
+        return Dataset(valid_equations), custom_log
 
     def _create_pretrain_dataset(self):
         self._pretrain_formulas = [
@@ -226,8 +236,6 @@ class FormulaStatistics:
         self.last_n_best_formulas = []
         self.last_n_best_mses = []
         self.last_n_best_sizes = deque([0] * use_n_last_steps, maxlen=use_n_last_steps)
-        self.the_best_formulas = []
-        self.the_best_mses = []
         self.percentile = percentile
 
     def clear_the_oldest_step(self):
@@ -245,21 +253,6 @@ class FormulaStatistics:
         self.last_n_best_sizes.append(len(epoch_best_formulas))
         self.last_n_best_mses += epoch_best_mses
         self.last_n_best_formulas += epoch_best_formulas
-        self._update_the_best_formulas(epoch_best_formulas=epoch_best_formulas, epoch_best_mses=epoch_best_mses)
-
-    def _update_the_best_formulas(self, epoch_best_formulas, epoch_best_mses):
-        self.the_best_formulas += epoch_best_formulas
-        self.the_best_mses += epoch_best_mses
-
-        the_best_pairs = sorted(zip(self.the_best_mses, self.the_best_formulas))[:200]
-        used_formulas = set()
-        self.the_best_formulas = []
-        self.the_best_mses = []
-        for i in range(len(the_best_pairs)):
-            if the_best_pairs[i][1] not in used_formulas:
-                self.the_best_formulas.append(the_best_pairs[i][1])
-                self.the_best_mses.append(the_best_pairs[i][0])
-            used_formulas.add(the_best_pairs[i][1])
 
     def write_last_n_to_file(self, filename):
         with open(filename, 'w') as f:
