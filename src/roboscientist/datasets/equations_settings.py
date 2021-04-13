@@ -27,6 +27,15 @@ class EquationSettings(ContextDecorator):
             )
 
         self._add_mul_arity_any = False
+
+        if not self._add_mul_arity_any:
+            for func in ['Mul', 'Add']:
+                self._all_functions[func] = sympy_function(
+                    arity=2,
+                    repr=func,
+                    func=snp.sympify(func)
+                )
+
         self._functions = copy(self._all_functions)
         self._constants = copy(self._all_constants)
 

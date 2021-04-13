@@ -3,6 +3,7 @@ import networkx as nx
 import numpy as np
 import re
 from . import equations_settings
+from copy import copy
 
 
 def construct_symbol(name):
@@ -91,6 +92,24 @@ def enumerate_vars_in_expression(expr: str):
     for old_symbol, new_symbol in map_variables.items():
         expr = expr.replace(old_symbol, new_symbol)
     return expr
+
+
+def graph_to_infix(D, node=0):
+    if D.out_degree(node) == 0:
+        expr = D.nodes[node]['expr']
+    else:
+        if D.nodes[node]['expr']:
+            expr = [
+                D.nodes[node]['expr'],
+                *[graph_to_infix(D, node=child) for child in D[node]]
+            ]
+            expr = " ".join(expr)
+        else:
+            # None => assuming that arity == 1
+            # and thus we do not nest it
+            expr = graph_to_infix(D, node=list(D[node].keys())[0])
+    return expr
+
 
 
 def graph_to_expression(D, node=0, return_str=True):
@@ -257,13 +276,14 @@ def postfix_to_expr(post, post_arity=None):
     """
     Returns expression from polish notation
     https://en.wikipedia.org/wiki/Shunting-yard_algorithm
+    # TODO: fix docs here
     """
     from sympy.core.function import arity as get_arity
 
     stack = []
 
     def symbol_or_constant(x):
-        if isinstance(x, str):
+        if isinstance(x, str) and "Symbol" not in x:
             return "Symbol('{}')".format(x)
         else:
             return str(x)
@@ -272,7 +292,10 @@ def postfix_to_expr(post, post_arity=None):
         post_arity = []
         for arg in post:
             func = snp.sympify(arg)
-            arity = get_arity(func)
+            try:
+                arity = get_arity(func)
+            except:
+                arity = 0
             if arity is None:
                 post_arity.append(2)
             else:
@@ -294,4 +317,15 @@ def postfix_to_expr(post, post_arity=None):
             expr = "".join(expr)
             stack.append(expr)
 
-    return snp.sympify(stack[0])  #  eval
+    return snp.sympify(stack[0])
+
+
+def infix_to_expr(pre, pre_arity=None, evaluate=True):
+    """
+    Returns expression from polish notation
+    https://en.wikipedia.org/wiki/Shunting-yard_algorithm
+    """
+    post_arity = copy(pre_arity)
+    if post_arity is not None:
+        post_arity = post_arity[::-1]
+    return postfix_to_expr(pre[::-1], post_arity)

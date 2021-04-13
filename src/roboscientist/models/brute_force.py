@@ -12,14 +12,13 @@ class BruteForceSolver(BaseSolver):
         self._max_time = max_time
         super().__init__(logger, *args, **kwargs)
 
-    def _training_step(self, equations: Dataset) -> Dataset:
+    def _training_step(self, equation, epoch):
         candidate_solutions = []
-        for equation in equations:
-            X, y = equation.dataset
-            # TODO: restart not from the start (generator)
-            candidate_solution = brute_force_solver(X, y, max_time=self._max_time)
-            candidate_solutions.append(candidate_solution)
-        return Dataset(candidate_solutions)
+        X, y = equation.dataset
+        # TODO: restart not from the start (generator)
+        candidate_solution = brute_force_solver(X, y, max_time=self._max_time)
+        candidate_solutions.append(candidate_solution)
+        return Dataset(candidate_solutions), None
 
 
 def brute_force_solver(X: np.ndarray, y: np.ndarray, max_time=10, max_iters=None):
@@ -80,5 +79,3 @@ def brute_force_equation_generator(n_max=5, n_symbols=2):
                     D.nodes[node]["expr"] = exprs[node]
                 equation = equations_base.Equation(equations_utils.graph_to_expression(D))
                 yield equation
-
-
