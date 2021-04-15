@@ -82,7 +82,6 @@ def run_epoch(model, optimizer, train_batches, valid_batches, kl_coef=0.01):
     random.shuffle(indices)
     for i, idx in enumerate(indices):
         optimizer.zero_grad()
-        # TODO(julia): sample Xs, ys from formula
         (inputs, targets), Xs, ys = train_batches[idx]
         logits, mu, logsigma, z = model(inputs, Xs, ys)
         rec, kl = _loss_function(logits, targets, mu, logsigma, model)
