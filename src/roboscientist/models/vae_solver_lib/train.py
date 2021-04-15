@@ -31,7 +31,6 @@ def build_ordered_batches(formula_file, solver):
         for line in f:
             f_to_eval = line.split()
             formulas.append(line.split())
-            # TODO(julia): add formula evaluation here to add correct Xs and ys after ensuring formulas correctness
             f_to_eval = [float(x) if x in solver.params.float_constants else x for x in f_to_eval]
             f_to_eval = equations_utils.infix_to_expr(f_to_eval)
             f_to_eval = equations_base.Equation(f_to_eval)
