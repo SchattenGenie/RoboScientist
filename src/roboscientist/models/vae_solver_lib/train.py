@@ -1,4 +1,5 @@
-from . import config
+from . import config, optimize_constants
+from roboscientist.datasets import equations_utils, equations_base
 
 import numpy as np
 
@@ -8,50 +9,44 @@ import random
 import torch.nn.functional as F
 
 
-def build_single_batch_from_formulas_list(formulas_list, device, token2ind):
+def build_single_batch_from_formulas_list(formulas_list, solver):
     batch_in, batch_out = [], []
     max_len = max([len(f) for f in formulas_list])
     for f in formulas_list:
-        f_idx = [token2ind[t] for t in f]
-        padding = [token2ind[config.PADDING]] * (max_len - len(f_idx))
-        batch_in.append([token2ind[config.START_OF_SEQUENCE]] + f_idx + padding)
-        batch_out.append(f_idx + [token2ind[config.END_OF_SEQUENCE]] + padding)
+        f_idx = [solver._token2ind[t] for t in f]
+        padding = [solver._token2ind[config.PADDING]] * (max_len - len(f_idx))
+        batch_in.append([solver._token2ind[config.START_OF_SEQUENCE]] + f_idx + padding)
+        batch_out.append(f_idx + [solver._token2ind[config.END_OF_SEQUENCE]] + padding)
     # we transpose here to make it compatible with LSTM input
-    return torch.LongTensor(batch_in).T.contiguous().to(device), torch.LongTensor(batch_out).T.contiguous().to(device)
+    return torch.LongTensor(batch_in).T.contiguous().to(solver.params.device), torch.LongTensor(batch_out).T.contiguous(
+
+    ).to(solver.params.device)
 
 
-def build_ordered_batches(formula_file, batch_size, device, real_X, real_y, token2ind):
+def build_ordered_batches(formula_file, solver):
     formulas = []
     Xs = []
     ys = []
     with open(formula_file) as f:
         for line in f:
+            f_to_eval = line.split()
             formulas.append(line.split())
             # TODO(julia): add formula evaluation here to add correct Xs and ys after ensuring formulas correctness
-            # try:
-            #     f_to_eval = equations_utils.infix_to_expr(line.strip().split())
-            #     f_to_eval = equations_base.Equation(f_to_eval)
-            #     Xs.append(real_X.reshape(-1, 1))
-            #     constants = optimize_constants.optimize_constants(f_to_eval, real_X, real_y)
-            #     if constants is not None:
-            #         y = f_to_eval.func(real_X, constants)
-            #         ys.append(y.reshape(-1, 1))
-            #     else:
-            #         ys.append(np.array(real_y).reshape(-1, 1))
-            # except:
-            #     Xs.append(real_X.reshape(-1, 1))
-            #     ys.append(np.array(real_y).reshape(-1, 1))
-            Xs.append(real_X.reshape(-1, 1))
-            ys.append(np.array(real_y).reshape(-1, 1))
+            f_to_eval = [float(x) if x in solver.params.float_constants else x for x in f_to_eval]
+            f_to_eval = equations_utils.infix_to_expr(f_to_eval)
+            f_to_eval = equations_base.Equation(f_to_eval)
+            constants = optimize_constants.optimize_constants(f_to_eval, solver.xs, solver.ys)
+            y = f_to_eval.func(solver.xs.reshape(-1, 1), constants)
+            ys.append(y.reshape(-1, 1))
 
     batches = []
     order = range(len(formulas))  # This will be necessary for reconstruction
     sorted_formulas, sorted_Xs, sorted_ys, order = zip(*sorted(zip(formulas, Xs, ys, order), key=lambda x: len(x[0])))
-    for batch_ind in range((len(sorted_formulas) + batch_size - 1) // batch_size):
-        batch_formulas = sorted_formulas[batch_ind * batch_size:(batch_ind + 1) * batch_size]
-        batch_Xs = sorted_Xs[batch_ind * batch_size:(batch_ind + 1) * batch_size]
-        batch_ys = sorted_ys[batch_ind * batch_size:(batch_ind + 1) * batch_size]
-        batches.append((build_single_batch_from_formulas_list(batch_formulas, device, token2ind),
+    for batch_ind in range((len(sorted_formulas) + solver.params.batch_size - 1) // solver.params.batch_size):
+        batch_formulas = sorted_formulas[batch_ind * solver.params.batch_size:(batch_ind + 1) * solver.params.batch_size]
+        batch_Xs = sorted_Xs[batch_ind * solver.params.batch_size:(batch_ind + 1) * solver.params.batch_size]
+        batch_ys = sorted_ys[batch_ind * solver.params.batch_size:(batch_ind + 1) * solver.params.batch_size]
+        batches.append((build_single_batch_from_formulas_list(batch_formulas, solver),
                         np.array(batch_Xs), np.array(batch_ys)))
     return batches, order
 

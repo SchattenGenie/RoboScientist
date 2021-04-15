@@ -72,36 +72,38 @@ VAESolverParams = namedtuple(
     ])
 
 VAESolverParams.__new__.__defaults__ = (
-    {'token_embedding_dim': 128, 'hidden_dim': 128, 'encoder_layers_cnt': 1,
-     'decoder_layers_cnt': 1, 'latent_dim':  8, 'x_dim': 1},  # model_params
-    15,  # max_formula_length
-    2,  # max_degree
-    ['sin', 'cos', 'Add', 'Mul'],  # functions
-    {'sin': 1, 'cos': 1, 'Add': 2, 'Mul': 2},  # arities
-    [],  # optimizable_constants
-    [],  # float constants
-    ["Symbol('x0')"],  # free variables
-    50,  # n_pretrain_steps
-    256,  # batch_size
-    20000,  # n_pretrain_formulas
-    False,  # create_pretrain_dataset
-    0.2,  # kl_coef
-    torch.device("cuda:0"),  # device
-    0.0005,  # learning_rate
-    (0.5, 0.999),  # betas
-    5,  # use_n_last_steps
-    20,  # percentile
-    2000,  # n_formulas_to_sample
-    False,  # add_noise_to_model_params
-    0.01,  # noise_coef
-    5,  # add_noise_every_n_steps
-    'sample',  # file_to_sample
-    'train',  # pretrain_train_file
-    'val',  # pretrain_val_file
-    False,  # no_retrain
-    False,  # continue_training_on_pretrain_dataset
-    np.linspace(0.1, 1, 100),  # xs
-    np.zeros(100),  # ys
+    {'token_embedding_dim': 128, 'hidden_dim': 128,
+     'encoder_layers_cnt': 1,
+     'decoder_layers_cnt': 1, 'latent_dim':  8,
+     'x_dim': 1},                                   # model_params
+    15,                                             # max_formula_length
+    2,                                              # max_degree
+    ['sin', 'cos', 'Add', 'Mul'],                   # functions
+    {'sin': 1, 'cos': 1, 'Add': 2, 'Mul': 2},       # arities
+    [],                                             # optimizable_constants
+    [],                                             # float constants
+    ["Symbol('x0')"],                               # free variables
+    50,                                             # n_pretrain_steps
+    256,                                            # batch_size
+    20000,                                          # n_pretrain_formulas
+    False,                                          # create_pretrain_dataset
+    0.2,                                            # kl_coef
+    torch.device("cuda:0"),                         # device
+    0.0005,                                         # learning_rate
+    (0.5, 0.999),                                   # betas
+    5,                                              # use_n_last_steps
+    20,                                             # percentile
+    2000,                                           # n_formulas_to_sample
+    False,                                          # add_noise_to_model_params
+    0.01,                                           # noise_coef
+    5,                                              # add_noise_every_n_steps
+    'sample',                                       # file_to_sample
+    'train',                                        # pretrain_train_file
+    'val',                                          # pretrain_val_file
+    False,                                          # no_retrain
+    False,                                          # continue_training_on_pretrain_dataset
+    np.linspace(0.1, 1, 100),                       # xs
+    np.zeros(100),                                  # ys
 )
 
 
@@ -143,14 +145,8 @@ class VAESolver(BaseSolver):
         self.cond_x = np.repeat(cond_x.reshape(1, -1, 1), self.params.n_formulas_to_sample, axis=0)
         self.cond_y = np.repeat(cond_y.reshape(1, -1, 1), self.params.n_formulas_to_sample, axis=0)
 
-        self.pretrain_batches, _ = train.build_ordered_batches(formula_file='train', batch_size=self.params.batch_size,
-                                                       device=self.params.device, real_X=self.params.xs,
-                                                       real_y=self.params.ys,
-                                                       token2ind=self._token2ind)
-        self.valid_batches, _ = train.build_ordered_batches(formula_file='val', batch_size=self.params.batch_size,
-                                                       device=self.params.device, real_X=self.params.xs,
-                                                       real_y=self.params.ys,
-                                                       token2ind=self._token2ind)
+        self.pretrain_batches, _ = train.build_ordered_batches(formula_file='train', solver=self)
+        self.valid_batches, _ = train.build_ordered_batches(formula_file='val', solver=self)
         train.pretrain(n_pretrain_steps=self.params.n_pretrain_steps, model=self.model, optimizer=self.optimizer,
                        pretrain_batches=self.pretrain_batches, pretrain_val_batches=self.valid_batches,
                        kl_coef=self.params.kl_coef)
@@ -193,9 +189,7 @@ class VAESolver(BaseSolver):
 
         self.stats.write_last_n_to_file(self.params.file_to_sample)
 
-        train_batches, _ = train.build_ordered_batches(self.params.file_to_sample, self.params.batch_size,
-                                                       device=self.params.device,
-                                                       real_X=self.xs, real_y=self.ys, token2ind=self._token2ind)
+        train_batches, _ = train.build_ordered_batches(self.params.file_to_sample, solver=self)
 
         if not self.params.no_retrain:
             train.run_epoch(self.model, self.optimizer, train_batches, train_batches, kl_coef=self.params.kl_coef)
