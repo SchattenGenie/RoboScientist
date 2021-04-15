@@ -37,6 +37,7 @@ def build_ordered_batches(formula_file, solver):
             f_to_eval = equations_base.Equation(f_to_eval)
             constants = optimize_constants.optimize_constants(f_to_eval, solver.xs, solver.ys)
             y = f_to_eval.func(solver.xs.reshape(-1, 1), constants)
+            Xs.append(solver.xs.reshape(-1, 1))
             ys.append(y.reshape(-1, 1))
 
     batches = []
