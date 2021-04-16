@@ -153,7 +153,7 @@ class VAESolver(BaseSolver):
         self.optimizer = torch.optim.Adam(self.model.parameters(), lr=self.params.learning_rate,
                                           betas=self.params.betas)
 
-        self.xs = self.params.initial_xs.reshape(-1, self.params.model_params.x_dim)
+        self.xs = self.params.initial_xs.reshape(-1, self.params.model_params['x_dim'])
         self.ys = self.params.initial_ys
 
         self.pretrain_batches, _ = train.build_ordered_batches(formula_file='train', solver=self)
@@ -217,12 +217,12 @@ class VAESolver(BaseSolver):
         return Dataset(valid_equations), custom_log
 
     def _get_condition(self, n):
-        cond_x = np.repeat(self.xs.reshape(1, -1, self.params.model_params.x_dim), n, axis=0)
+        cond_x = np.repeat(self.xs.reshape(1, -1, self.params.model_params['x_dim']), n, axis=0)
         cond_y = np.repeat(self.ys.reshape(1, -1, 1), n, axis=0)
         return cond_x, cond_y
 
     def _add_next_point(self, next_point):
-        self.xs = np.append(self.xs, next_point).reshape(-1, self.params.model_params.x_dim)
+        self.xs = np.append(self.xs, next_point).reshape(-1, self.params.model_params['x_dim'])
         self.ys = np.append(self.ys, self.params.true_formula.func(next_point))
 
     def _create_pretrain_dataset(self):
