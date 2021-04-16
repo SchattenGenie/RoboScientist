@@ -1,6 +1,6 @@
 from roboscientist.datasets import equations_generation, Dataset, equations_utils, equations_base
 from .solver_base import BaseSolver
-from .vae_solver_lib import config, model, train, optimize_constants, formula_infix_utils
+from .vae_solver_lib import config, model, train, optimize_constants, formula_infix_utils, active_learning
 
 from sklearn.metrics import mean_squared_error
 
@@ -12,6 +12,8 @@ import numpy as np
 
 VAESolverParams = namedtuple(
     'VAESolverParams', [
+        # problem parameters
+        'true_formula',                             # Equation: true formula (needed for active learning)
         # model parameters
         'model_params',                             # Dict with model parameters. Must include: token_embedding_dim,
                                                     #  hidden_dim, encoder_layers_cnt, decoder_layers_cnt, latent_dim,
@@ -67,11 +69,22 @@ VAESolverParams = namedtuple(
         'continue_training_on_pretrain_dataset',    # Bool: if True, continue training the model on the pretrain dataset
 
         # data
-        'xs',                                       # numpy array: initial xs data
-        'ys',                                       # numpy array: initial ys data
+        'initial_xs',                                       # numpy array: initial xs data
+        'initial_ys',                                       # numpy array: initial ys data
+
+        # active learning
+        'active_learning',                          # Bool: if True, active learning strategies will be used to
+                                                    # increase the dataset
+        'active_learning_epochs',                   # Int: do active learning every |active_learning_epochs| epochs
+        'active_learning_strategy',                 # Str: active learning strategy
+        'active_learning_n_x_candidates',           # Int: number of x candidates to consider when picking the next one
+        'active_learning_n_sample',                 # Int: number of formulas to sample for active learning metric
+                                                    # calculation
+        'active_learning_file_to_sample',           # Srt: path to file to sample formulas to
     ])
 
 VAESolverParams.__new__.__defaults__ = (
+    None,                                           # true_formula
     {'token_embedding_dim': 128, 'hidden_dim': 128,
      'encoder_layers_cnt': 1,
      'decoder_layers_cnt': 1, 'latent_dim':  8,
@@ -102,8 +115,14 @@ VAESolverParams.__new__.__defaults__ = (
     'val',                                          # pretrain_val_file
     False,                                          # no_retrain
     False,                                          # continue_training_on_pretrain_dataset
-    np.linspace(0.1, 1, 100),                       # xs
-    np.zeros(100),                                  # ys
+    np.linspace(0.1, 1, 100),                       # initial_xs
+    np.zeros(100),                                  # initial_ys
+    False,                                          # active_learning
+    1,                                              # active_learning_epochs
+    'var',                                          # active_learning_strategy
+    100,                                            # active_learning_n_x_candidates
+    5000,                                           # active_learning_n_sample
+    'active_learning_sample',                       # active_learning_file_to_sample
 )
 
 
@@ -134,16 +153,8 @@ class VAESolver(BaseSolver):
         self.optimizer = torch.optim.Adam(self.model.parameters(), lr=self.params.learning_rate,
                                           betas=self.params.betas)
 
-        self.xs = self.params.xs
-        self.ys = self.params.ys
-
-        cond_x = np.copy(self.params.xs)
-        cond_y = np.copy(self.params.ys)
-        if len(self.params.xs.shape) == 1:
-            cond_x = cond_x.reshape(-1, 1)
-        cond_y = cond_y.reshape(-1, 1)
-        self.cond_x = np.repeat(cond_x.reshape(1, -1, 1), self.params.n_formulas_to_sample, axis=0)
-        self.cond_y = np.repeat(cond_y.reshape(1, -1, 1), self.params.n_formulas_to_sample, axis=0)
+        self.xs = self.params.initial_xs.reshape(-1, self.params.model_params.x_dim)
+        self.ys = self.params.initial_ys
 
         self.pretrain_batches, _ = train.build_ordered_batches(formula_file='train', solver=self)
         self.valid_batches, _ = train.build_ordered_batches(formula_file='val', solver=self)
@@ -157,10 +168,9 @@ class VAESolver(BaseSolver):
 
         noises = self._maybe_add_noise_to_model_params(epoch)
 
+        cond_x, cond_y = self._get_condition(self.params.n_formulas_to_sample)
         self.model.sample(self.params.n_formulas_to_sample, self.params.max_formula_length,
-                                       self.params.file_to_sample,
-                                       Xs=self.cond_x,
-                                       ys=self.cond_y, ensure_valid=False, unique=True)
+                          self.params.file_to_sample, Xs=cond_x, ys=cond_y, ensure_valid=False, unique=True)
 
         self._maybe_remove_noise_from_model_params(epoch, noises)
 
@@ -199,7 +209,21 @@ class VAESolver(BaseSolver):
                            kl_coef=self.params.kl_coef)
 
         # TODO(julia) add active learning
+        if self.params.active_learning and epoch % self.params.active_learning_epochs == 1:
+            next_point = active_learning.pick_next_point(solver=self)
+            self._add_next_point(next_point)
+            custom_log['next_point_value'] = next_point
+
         return Dataset(valid_equations), custom_log
+
+    def _get_condition(self, n):
+        cond_x = np.repeat(self.xs.reshape(1, -1, self.params.model_params.x_dim), n, axis=0)
+        cond_y = np.repeat(self.ys.reshape(1, -1, 1), n, axis=0)
+        return cond_x, cond_y
+
+    def _add_next_point(self, next_point):
+        self.xs = np.append(self.xs, next_point).reshape(-1, self.params.model_params.x_dim)
+        self.ys = np.append(self.ys, self.params.true_formula.func(next_point))
 
     def _create_pretrain_dataset(self):
         self._pretrain_formulas = [
