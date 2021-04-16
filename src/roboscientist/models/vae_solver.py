@@ -69,8 +69,8 @@ VAESolverParams = namedtuple(
         'continue_training_on_pretrain_dataset',    # Bool: if True, continue training the model on the pretrain dataset
 
         # data
-        'initial_xs',                                       # numpy array: initial xs data
-        'initial_ys',                                       # numpy array: initial ys data
+        'initial_xs',                               # numpy array: initial xs data
+        'initial_ys',                               # numpy array: initial ys data
 
         # active learning
         'active_learning',                          # Bool: if True, active learning strategies will be used to
@@ -209,7 +209,7 @@ class VAESolver(BaseSolver):
                            kl_coef=self.params.kl_coef)
 
         # TODO(julia) add active learning
-        if self.params.active_learning and epoch % self.params.active_learning_epochs == 1:
+        if self.params.active_learning and epoch % self.params.active_learning_epochs == 0:
             next_point = active_learning.pick_next_point(solver=self)
             self._add_next_point(next_point)
             custom_log['next_point_value'] = next_point
