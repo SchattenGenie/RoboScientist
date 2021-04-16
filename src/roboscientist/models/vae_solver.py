@@ -223,7 +223,7 @@ class VAESolver(BaseSolver):
 
     def _add_next_point(self, next_point):
         self.xs = np.append(self.xs, next_point).reshape(-1, self.params.model_params['x_dim'])
-        self.ys = np.append(self.ys, self.params.true_formula.func(next_point))
+        self.ys = np.append(self.ys, self.params.true_formula.func(np.array(next_point).reshape(-1, 1)))
 
     def _create_pretrain_dataset(self):
         self._pretrain_formulas = [
