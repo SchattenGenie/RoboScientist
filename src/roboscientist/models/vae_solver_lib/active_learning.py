@@ -39,7 +39,7 @@ def pairwise_dist(x, y):
 def _pick_next_point_max_var(solver, candidate_xs):
     cond_x, cond_y = solver._get_condition(solver.params.active_learning_n_sample)
     solver.model.sample(solver.params.active_learning_n_sample, solver.params.max_formula_length,
-                              solver.params.active_learning_sample, Xs=cond_x, ys=cond_y, unique=False)
+                        solver.params.active_learning_file_to_sample, Xs=cond_x, ys=cond_y, unique=False)
     ys = []
     with open(solver.params.active_learning_file_to_sample) as f:
         for line in f:
