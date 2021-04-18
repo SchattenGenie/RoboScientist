@@ -72,7 +72,7 @@ class Equation(base.BaseProblem):
         constants_sympy = numpy_to_sympy_constants(constants, self)
         res = self._lambdified_expr(**X_sympy, **constants_sympy)
         if isinstance(res, float) or isinstance(res, int):
-            res = [res] * len(X)
+            res = np.full((len(X),), res).astype(float)
         return res
 
     def __call__(self, X, constants=None):
