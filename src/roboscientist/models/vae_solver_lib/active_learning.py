@@ -59,10 +59,15 @@ def _pick_next_point_max_var(solver, candidate_xs):
     return candidate_xs[np.argmax(var)]
 
 
+def _pick_next_point_random(solver, candidate_xs):
+    return candidate_xs[np.random.randint(0, len(candidate_xs), 1)]
+
+
 def pick_next_point(solver):
     candidate_xs = solver.params.true_formula.domain_sample(n=solver.params.active_learning_n_x_candidates)
     if solver.params.active_learning_strategy == 'var':
         return _pick_next_point_max_var(solver, candidate_xs)
+    if solver.params.active_learning_strategy == 'random':
+        return _pick_next_point_random(solver, candidate_xs)
     else:
         raise 57
-
