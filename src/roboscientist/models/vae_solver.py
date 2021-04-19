@@ -127,7 +127,7 @@ VAESolverParams.__new__.__defaults__ = (
 
 
 class VAESolver(BaseSolver):
-    def __init__(self, logger, solver_params=None):
+    def __init__(self, logger, checkpoint_file=None, solver_params=None):
         super().__init__(logger)
 
         if solver_params is None:
@@ -152,6 +152,8 @@ class VAESolver(BaseSolver):
         self.model.to(self.params.device)
         self.optimizer = torch.optim.Adam(self.model.parameters(), lr=self.params.learning_rate,
                                           betas=self.params.betas)
+        if checkpoint_file is not None:
+            self._load_from_checkpoint(checkpoint_file)
 
         self.xs = self.params.initial_xs.reshape(-1, self.params.model_params['x_dim'])
         self.ys = self.params.initial_ys
@@ -161,6 +163,17 @@ class VAESolver(BaseSolver):
         train.pretrain(n_pretrain_steps=self.params.n_pretrain_steps, model=self.model, optimizer=self.optimizer,
                        pretrain_batches=self.pretrain_batches, pretrain_val_batches=self.valid_batches,
                        kl_coef=self.params.kl_coef)
+
+    def create_checkpoint(self, checkpoint_file):
+        torch.save({
+            'model_state_dict': self.model.state_dict(),
+            'optimizer_state_dict': self.optimizer.state_dict(),
+        }, checkpoint_file)
+
+    def _load_from_checkpoint(self, checkpoint_file):
+        checkpoint = torch.load(checkpoint_file)
+        self.model.load_state_dict(checkpoint['model_state_dict'])
+        self.optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
 
     def _training_step(self, equation, epoch):
         custom_log = {}

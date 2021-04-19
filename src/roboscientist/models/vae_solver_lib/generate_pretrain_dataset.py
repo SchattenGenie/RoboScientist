@@ -63,5 +63,5 @@ def generate_pretrain_dataset(size, max_len, file=None):
 
 
 if __name__ == '__main__':
-    generate_pretrain_dataset(200000, 14, 'train_tttt')
+    generate_pretrain_dataset(20000, 14, 'train_tttt')
     generate_pretrain_dataset(10000, 14, 'val_tttt')
