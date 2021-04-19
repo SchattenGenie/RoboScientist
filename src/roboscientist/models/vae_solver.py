@@ -152,17 +152,18 @@ class VAESolver(BaseSolver):
         self.model.to(self.params.device)
         self.optimizer = torch.optim.Adam(self.model.parameters(), lr=self.params.learning_rate,
                                           betas=self.params.betas)
-        if checkpoint_file is not None:
-            self._load_from_checkpoint(checkpoint_file)
 
         self.xs = self.params.initial_xs.reshape(-1, self.params.model_params['x_dim'])
         self.ys = self.params.initial_ys
 
-        self.pretrain_batches, _ = train.build_ordered_batches(formula_file='train', solver=self)
-        self.valid_batches, _ = train.build_ordered_batches(formula_file='val', solver=self)
-        train.pretrain(n_pretrain_steps=self.params.n_pretrain_steps, model=self.model, optimizer=self.optimizer,
-                       pretrain_batches=self.pretrain_batches, pretrain_val_batches=self.valid_batches,
-                       kl_coef=self.params.kl_coef)
+        if checkpoint_file is not None:
+            self._load_from_checkpoint(checkpoint_file)
+        else:
+            self.pretrain_batches, _ = train.build_ordered_batches(formula_file='train', solver=self)
+            self.valid_batches, _ = train.build_ordered_batches(formula_file='val', solver=self)
+            train.pretrain(n_pretrain_steps=self.params.n_pretrain_steps, model=self.model, optimizer=self.optimizer,
+                           pretrain_batches=self.pretrain_batches, pretrain_val_batches=self.valid_batches,
+                           kl_coef=self.params.kl_coef)
 
     def create_checkpoint(self, checkpoint_file):
         torch.save({
