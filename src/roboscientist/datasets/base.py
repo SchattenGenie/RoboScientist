@@ -1,8 +1,6 @@
 from abc import ABC, abstractmethod
 import numpy as np
-import skopt
 from skopt import Space
-import sys
 
 
 class BaseProblem(ABC):
