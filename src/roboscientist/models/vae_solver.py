@@ -1,6 +1,7 @@
 from roboscientist.datasets import equations_generation, Dataset, equations_utils, equations_base
 from .solver_base import BaseSolver
 from .vae_solver_lib import config, model, train, optimize_constants, formula_infix_utils, active_learning
+from .vae_solver_lib import generate_pretrain_dataset
 
 from sklearn.metrics import mean_squared_error
 
@@ -16,7 +17,7 @@ VAESolverParams = namedtuple(
         'true_formula',                             # Equation: true formula (needed for active learning)
         # model parameters
         'model_params',                             # Dict with model parameters. Must include: token_embedding_dim,
-                                                    #  hidden_dim, encoder_layers_cnt, decoder_layers_cnt, latent_dim,
+                                                    # hidden_dim, encoder_layers_cnt, decoder_layers_cnt, latent_dim,
                                                     # x_dim
 
         # formula parameters
@@ -141,7 +142,7 @@ class VAESolver(BaseSolver):
         self._token2ind = {t: i for i, t in enumerate(self._ind2token)}
 
         if self.params.create_pretrain_dataset:
-            self._create_pretrain_dataset()
+            self._create_pretrain_dataset(strategy='node_sample')
 
         self.stats = FormulaStatistics(use_n_last_steps=self.params.use_n_last_steps,
                                        percentile=self.params.percentile)
@@ -239,29 +240,46 @@ class VAESolver(BaseSolver):
         self.xs = np.append(self.xs, next_point).reshape(-1, self.params.model_params['x_dim'])
         self.ys = np.append(self.ys, self.params.true_formula.func(np.array(next_point).reshape(-1, 1)))
 
-    def _create_pretrain_dataset(self):
-        self._pretrain_formulas = [
-            equations_generation.generate_random_equation_from_settings({
-                'functions': self.params.functions, 'constants': self.params.constants},
-            max_degree=self.params.max_degree, return_graph_infix=True) for _ in range(self.params.n_pretrain_formulas)]
+    def _create_pretrain_dataset(self, strategy):
+        if strategy == 'node_sample':
+            generate_pretrain_dataset.generate_pretrain_dataset(
+                self.params.n_pretrain_formulas, self.params.max_formula_length - 1, self.params.pretrain_train_file,
+                functions=self.params.functions, arities=self.params.arities,
+                all_tokens=self.params.functions + self.params.float_constants + \
+                           self.params.free_variables + ["Symbol('const%d')"])
+            generate_pretrain_dataset.generate_pretrain_dataset(
+                self.params.n_pretrain_formulas, self.params.max_formula_length - 1, self.params.pretrain_val_file,
+                functions=self.params.functions, arities=self.params.arities,
+                all_tokens=self.params.functions + self.params.float_constants + \
+                           self.params.free_variables + ["Symbol('const%d')"])
+            return
 
-        self._pretrain_formulas_val = [
-            equations_generation.generate_random_equation_from_settings({
-                'functions': self.params.functions, 'constants': self.params.constants},
-                max_degree=self.params.max_degree, return_graph_infix=True) for _ in range(
-                self.params.n_pretrain_formulas)]
+        if strategy == 'uniform':
+            self._pretrain_formulas = [
+                equations_generation.generate_random_equation_from_settings({
+                    'functions': self.params.functions, 'constants': self.params.constants},
+                max_degree=self.params.max_degree, return_graph_infix=True) for _ in range(self.params.n_pretrain_formulas)]
 
-        with open(self.params.pretrain_train_file, 'w') as ff:
-            for i, D in enumerate(self._pretrain_formulas):
-                ff.write(D)
-                if i != len(self._pretrain_formulas) - 1:
-                    ff.write('\n')
+            self._pretrain_formulas_val = [
+                equations_generation.generate_random_equation_from_settings({
+                    'functions': self.params.functions, 'constants': self.params.constants},
+                    max_degree=self.params.max_degree, return_graph_infix=True) for _ in range(
+                    self.params.n_pretrain_formulas)]
 
-        with open(self.params.pretrain_val_file, 'w') as ff:
-            for i, D in enumerate(self._pretrain_formulas_val):
-                ff.write(D)
-                if i != len(self._pretrain_formulas_val) - 1:
-                    ff.write('\n')
+            with open(self.params.pretrain_train_file, 'w') as ff:
+                for i, D in enumerate(self._pretrain_formulas):
+                    ff.write(D)
+                    if i != len(self._pretrain_formulas) - 1:
+                        ff.write('\n')
+
+            with open(self.params.pretrain_val_file, 'w') as ff:
+                for i, D in enumerate(self._pretrain_formulas_val):
+                    ff.write(D)
+                    if i != len(self._pretrain_formulas_val) - 1:
+                        ff.write('\n')
+            return
+
+        raise 57
 
     def _maybe_add_noise_to_model_params(self, epoch):
         noises = []
