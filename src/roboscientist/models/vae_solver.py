@@ -192,8 +192,10 @@ class VAESolver(BaseSolver):
         valid_formulas = []
         valid_equations = []
         valid_mses = []
+        n_all = 0
         with open(self.params.file_to_sample) as f:
             for line in f:
+                n_all += 1
                 try:
                     f_to_eval = formula_infix_utils.clear_redundant_operations(line.strip().split(),
                                                                                self.params.functions,
@@ -209,6 +211,8 @@ class VAESolver(BaseSolver):
                 except:
                     continue
         custom_log['unique_valid_formulas_sampled_percentage'] = len(valid_formulas) / self.params.n_formulas_to_sample
+        custom_log['unique_formulas_sampled_percentage'] = n_all / self.params.n_formulas_to_sample
+        custom_log['unique_valid_to_all_unique'] = len(valid_formulas) / n_all
 
         self.stats.save_best_samples(sampled_mses=valid_mses, sampled_formulas=valid_formulas)
 
