@@ -29,15 +29,18 @@ def build_ordered_batches(formula_file, solver):
     ys = []
     with open(formula_file) as f:
         for line in f:
-            f_to_eval = line.split()
-            formulas.append(line.split())
-            f_to_eval = [float(x) if x in solver.params.float_constants else x for x in f_to_eval]
-            f_to_eval = equations_utils.infix_to_expr(f_to_eval)
-            f_to_eval = equations_base.Equation(f_to_eval)
-            constants = optimize_constants.optimize_constants(f_to_eval, solver.xs, solver.ys)
-            y = f_to_eval.func(solver.xs.reshape(-1, 1), constants)
-            Xs.append(solver.xs.reshape(-1, 1))
-            ys.append(y.reshape(-1, 1))
+            try:
+                f_to_eval = line.split()
+                formulas.append(line.split())
+                f_to_eval = [float(x) if x in solver.params.float_constants else x for x in f_to_eval]
+                f_to_eval = equations_utils.infix_to_expr(f_to_eval)
+                f_to_eval = equations_base.Equation(f_to_eval)
+                constants = optimize_constants.optimize_constants(f_to_eval, solver.xs, solver.ys)
+                y = f_to_eval.func(solver.xs.reshape(-1, 1), constants)
+                Xs.append(solver.xs.reshape(-1, 1))
+                ys.append(y.reshape(-1, 1))
+            except:
+                print(f'Failed to add formula to batch {line.split()}')
 
     batches = []
     order = range(len(formulas))  # This will be necessary for reconstruction
@@ -61,17 +64,17 @@ def _loss_function(logits, targets, mu, logsigma, model):
     return reconstruction_loss.sum(dim=0).mean(), KLD
 
 
-def _evaluate(model, batches):
+def _evaluate(model, batches, kl_coef):
     model.eval()
-    kl_losses, rec_losses = [], []
+    kl_losses, rec_losses, losses = [], [], []
     with torch.no_grad():
         for (inputs, targets), Xs, ys in batches:
             logits, mu, logsigma, z = model(inputs, Xs, ys)
             rec, kl = _loss_function(logits, targets, mu, logsigma, model)
             kl_losses.append(kl.item())
             rec_losses.append(rec.item())
-    loss = np.mean(rec_losses)
-    return loss, np.mean(rec_losses), np.mean(kl_losses)
+            losses.append(rec.item() + kl_coef * kl.item())
+    return np.mean(losses), np.mean(rec_losses), np.mean(kl_losses)
 
 
 def run_epoch(model, optimizer, train_batches, valid_batches, kl_coef=0.01):
@@ -95,8 +98,10 @@ def run_epoch(model, optimizer, train_batches, valid_batches, kl_coef=0.01):
     print('\t[training] loss: %0.3f, rec loss: %0.3f, kl: %0.3f' % (
         np.mean(losses), np.mean(rec_losses), np.mean(kl_losses)))
 
-    valid_losses = _evaluate(model, valid_batches)
+    valid_losses = _evaluate(model, valid_batches, kl_coef)
     print('\t[validation] loss: %0.3f, rec loss: %0.3f, kl: %0.3f' % valid_losses)
+    train_losses = (np.mean(losses), np.mean(rec_losses), np.mean(kl_losses))
+    return train_losses, valid_losses
 
 
 def pretrain(n_pretrain_steps, model, optimizer, pretrain_batches, pretrain_val_batches, kl_coef):

@@ -221,7 +221,17 @@ class VAESolver(BaseSolver):
         train_batches, _ = train.build_ordered_batches(self.params.file_to_sample, solver=self)
 
         if not self.params.no_retrain:
-            train.run_epoch(self.model, self.optimizer, train_batches, train_batches, kl_coef=self.params.kl_coef)
+            train_losses, valid_losses = train.run_epoch(self.model, self.optimizer, train_batches, train_batches,
+                                                         kl_coef=self.params.kl_coef)
+            tr_loss, tr_rec_loss, tr_kl = train_losses
+            v_loss, v_rec_loss, v_kl = valid_losses
+            custom_log['retrain_train_loss'] = tr_loss
+            custom_log['retrain_train_rec_loss'] = tr_rec_loss
+            custom_log['retrain_train_kl_loss'] = tr_kl
+
+            custom_log['retrain_val_loss'] = v_loss
+            custom_log['retrain_val_rec_loss'] = v_rec_loss
+            custom_log['retrain_val_kl_loss'] = v_kl
         if self.params.continue_training_on_pretrain_dataset:
             train.pretrain(n_pretrain_steps=1, model=self.model, optimizer=self.optimizer,
                            pretrain_batches=train_batches, pretrain_val_batches=self.valid_batches,
