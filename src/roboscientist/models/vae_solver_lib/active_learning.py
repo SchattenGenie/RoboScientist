@@ -37,12 +37,12 @@ def pairwise_dist(x, y):
 
 
 def _pick_next_point_max_var(solver, candidate_xs):
-    cond_x, cond_y = solver._get_condition(solver.params.active_learning_n_sample)
-    solver.model.sample(solver.params.active_learning_n_sample, solver.params.max_formula_length,
-                        solver.params.active_learning_file_to_sample, Xs=cond_x, ys=cond_y, unique=False,
-                        ensure_valid=False)
+    # cond_x, cond_y = solver._get_condition(solver.params.active_learning_n_sample)
+    # solver.model.sample(solver.params.active_learning_n_sample, solver.params.max_formula_length,
+    #                     solver.params.active_learning_file_to_sample, Xs=cond_x, ys=cond_y, unique=False,
+    #                     ensure_valid=False)
     ys = []
-    with open(solver.params.active_learning_file_to_sample) as f:
+    with open(solver.params.file_to_sample) as f:
         for line in f:
             try:
                 f_to_eval = formula_infix_utils.clear_redundant_operations(line.strip().split(),
@@ -61,12 +61,12 @@ def _pick_next_point_max_var(solver, candidate_xs):
 
 
 def _pick_next_point_max_entropy(solver, candidate_xs):
-    cond_x, cond_y = solver._get_condition(solver.params.active_learning_n_sample)
-    solver.model.sample(solver.params.active_learning_n_sample, solver.params.max_formula_length,
-                        solver.params.active_learning_file_to_sample, Xs=cond_x, ys=cond_y, unique=False,
-                        ensure_valid=False)
+    # cond_x, cond_y = solver._get_condition(solver.params.active_learning_n_sample)
+    # solver.model.sample(solver.params.active_learning_n_sample, solver.params.max_formula_length,
+    #                     solver.params.active_learning_file_to_sample, Xs=cond_x, ys=cond_y, unique=False,
+    #                     ensure_valid=False)
     ys = []
-    with open(solver.params.active_learning_file_to_sample) as f:
+    with open(solver.params.file_to_sample) as f:
         for line in f:
             try:
                 f_to_eval = formula_infix_utils.clear_redundant_operations(line.strip().split(),
