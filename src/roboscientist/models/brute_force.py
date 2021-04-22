@@ -77,8 +77,10 @@ def brute_force_equation_generator(n_max=5, n_symbols=2):
             for exprs in itertools.product(*possible_mappers):
                 for node in D.nodes:
                     D.nodes[node]["expr"] = exprs[node]
-                expr_str = equations_utils.graph_to_expression(D)
-                print("expr_str ", expr_str)
-                expr = snp.sympify(expr_str)
+                expr = equations_utils.graph_to_expression(D, return_str=True)
+                expr = equations_utils.enumerate_constants_in_expression(expr)
+                expr = equations_utils.enumerate_vars_in_expression(expr)
+                expr = snp.sympify(expr)
+                expr = snp.sympify(expr)
                 equation = equations_base.Equation(expr)
                 yield equation
