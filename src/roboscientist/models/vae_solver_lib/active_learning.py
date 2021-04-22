@@ -57,6 +57,7 @@ def _pick_next_point_max_var(solver, candidate_xs):
             except:
                 continue
     var = np.var(np.array(ys), axis=0)
+    print(var)
     return candidate_xs[np.argmax(var)]
 
 
