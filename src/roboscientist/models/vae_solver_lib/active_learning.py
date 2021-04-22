@@ -39,7 +39,8 @@ def pairwise_dist(x, y):
 def _pick_next_point_max_var(solver, candidate_xs):
     cond_x, cond_y = solver._get_condition(solver.params.active_learning_n_sample)
     solver.model.sample(solver.params.active_learning_n_sample, solver.params.max_formula_length,
-                        solver.params.active_learning_file_to_sample, Xs=cond_x, ys=cond_y, unique=False)
+                        solver.params.active_learning_file_to_sample, Xs=cond_x, ys=cond_y, unique=False,
+                        ensure_valid=False)
     ys = []
     with open(solver.params.active_learning_file_to_sample) as f:
         for line in f:
@@ -62,7 +63,8 @@ def _pick_next_point_max_var(solver, candidate_xs):
 def _pick_next_point_max_entropy(solver, candidate_xs):
     cond_x, cond_y = solver._get_condition(solver.params.active_learning_n_sample)
     solver.model.sample(solver.params.active_learning_n_sample, solver.params.max_formula_length,
-                        solver.params.active_learning_file_to_sample, Xs=cond_x, ys=cond_y, unique=False)
+                        solver.params.active_learning_file_to_sample, Xs=cond_x, ys=cond_y, unique=False,
+                        ensure_valid=False)
     ys = []
     with open(solver.params.active_learning_file_to_sample) as f:
         for line in f:
@@ -78,7 +80,7 @@ def _pick_next_point_max_entropy(solver, candidate_xs):
                 ys.append(y)
             except:
                 continue
-    entropy = empirical_entropy(torch.from_numpy(np.array(ys)))
+    entropy = empirical_entropy(torch.from_numpy(np.array(ys).T))
     print(entropy)
     return candidate_xs[np.argmax(entropy)]
 
@@ -103,9 +105,3 @@ if __name__ == '__main__':
     y = torch.randn(30, 1)
     print("Empirical entropy: {}".format(empirical_entropy(y).mean()))
     print("Theoretical entropy: {}".format(1 / 2 + torch.tensor(3.14 * 2).sqrt().log()))
-
-    tt = torch.from_numpy(np.array([[1., 2, 3], [4, 5, 6], [7, 8, 10]]))
-    g = empirical_entropy(tt)
-    print(g)
-    a = np.array([1, 2, 3])
-    print(a[np.argmax(g)])
