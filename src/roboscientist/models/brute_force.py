@@ -4,6 +4,7 @@ from roboscientist.models import utils
 from .solver_base import BaseSolver
 import numpy as np
 from tqdm import tqdm
+import sympy as snp
 import time
 
 
@@ -51,7 +52,6 @@ def brute_force_equation_generator(n_max=5, n_symbols=2):
     # https://codereview.stackexchange.com/questions/202773/generating-all-unlabeled-trees-with-up-to-n-nodes
     import networkx as nx
     from networkx.generators.nonisomorphic_trees import nonisomorphic_trees
-    equations_settings.setup_brute_force()
     symbols = ["Symbol('x{}')".format(i) for i in range(n_symbols)]
     for n in range(2, n_max):
         for D in nonisomorphic_trees(n):
@@ -62,20 +62,23 @@ def brute_force_equation_generator(n_max=5, n_symbols=2):
             for degree in out_degrees:
                 if degree == 0:
                     possible_mappers.append(
-                        symbols + equations_settings.constants
+                        symbols + [str(c) for c in equations_settings.settings.constants]
                     )
                 elif degree == 1:
                     possible_mappers.append(
-                        equations_settings.functions_with_arity[1]
+                        equations_settings.settings.get_functions_by_arity(1) +
+                        equations_settings.settings.get_functions_by_arity(None)
                     )
                 else:
                     possible_mappers.append(
-                        equations_settings.functions_with_arity.get(degree, [None]) +
-                        equations_settings.functions_with_arity[0]
+                        equations_settings.settings.get_functions_by_arity(degree) +
+                        equations_settings.settings.get_functions_by_arity(None)
                     )
-
             for exprs in itertools.product(*possible_mappers):
                 for node in D.nodes:
                     D.nodes[node]["expr"] = exprs[node]
-                equation = equations_base.Equation(equations_utils.graph_to_expression(D))
+                expr_str = equations_utils.graph_to_expression(D)
+                print("expr_str ", expr_str)
+                expr = snp.sympify(expr_str)
+                equation = equations_base.Equation(expr)
                 yield equation

@@ -10,5 +10,5 @@ __all__ = [
     'equations_utils', 'base', 'equations_base.py',
     'generate_polynomial', 'generate_random_equation',
     'settings', 'generate_polynomial_dataset',
-    'Dataset'
+    'Dataset', 'generate_sin_cos'
 ]

@@ -71,6 +71,6 @@ def generate_sin_cos(nodes=10, n_variables=1, max_degree=3, space=((-5., 5.),), 
     :param space:
     :return:
     """
-    return generate_random_equation_from_settings({'functions': ["Add", "Mul", "sin", "cos"],},
+    return generate_random_equation_from_settings({'functions': ["Add", "Mul", "sin", "cos"], 'constants': [1.]},
                                      nodes=nodes, n_variables=n_variables, max_degree=max_degree, space=space,
                                                   return_graph_infix=return_graph_infix)
