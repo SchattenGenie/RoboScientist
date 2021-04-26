@@ -303,7 +303,6 @@ def postfix_to_expr(post, post_arity=None, func_to_arity=None):
                 post_arity.append(2)
             else:
                 post_arity.append(arity)
-    print(post_arity)
 
     for arg, arg_arity in zip(post, post_arity):
         if arg_arity == 0:
@@ -319,7 +318,6 @@ def postfix_to_expr(post, post_arity=None, func_to_arity=None):
                 ")"
             ]
             expr = "".join(expr)
-            print(stack)
             stack.append(expr)
 
     return snp.sympify(stack[0])
