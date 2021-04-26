@@ -372,11 +372,13 @@ class FormulaStatisticsQueue:
         all_mses = self.mses + sampled_mses
         all_formulas = self.formulas + sampled_formulas
 
-        sorted_pairs = sorted(zip(all_mses, all_formulas), key=lambda x: x[0])[:self.queue_size]
-        random.shuffle(sorted_pairs)
+        sorted_pairs = sorted(zip(all_mses, all_formulas), key=lambda x: x[0])
+        used = set()
+        unique_pairs = [x for x in sorted_pairs if x[1] not in used and (used.add(x[1]) or True)][:self.queue_size]
+        random.shuffle(unique_pairs)
 
-        self.mses = [x[0] for x in sorted_pairs]
-        self.formulas = [x[1] for x in sorted_pairs]
+        self.mses = [x[0] for x in unique_pairs]
+        self.formulas = [x[1] for x in unique_pairs]
 
     def write_last_n_to_file(self, filename):
         with open(filename, 'w') as f:
