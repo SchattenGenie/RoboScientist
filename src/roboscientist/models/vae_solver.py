@@ -216,7 +216,7 @@ class VAESolver(BaseSolver):
                                                                                self.params.functions,
                                                                                self.params.arities)
                     f_to_eval = [float(x) if x in self.params.float_constants else x for x in f_to_eval]
-                    f_to_eval = equations_utils.infix_to_expr(f_to_eval)
+                    f_to_eval = equations_utils.infix_to_expr(f_to_eval, func_to_arity=self.params.arities)
                     f_to_eval = equations_base.Equation(f_to_eval)
                     constants = optimize_constants.optimize_constants(f_to_eval, self.xs, self.ys)
                     y = f_to_eval.func(self.xs.reshape(-1, 1), constants)
