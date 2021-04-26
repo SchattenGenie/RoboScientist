@@ -9,6 +9,7 @@ import torch
 
 from collections import deque, namedtuple
 import numpy as np
+import random
 
 
 VAESolverParams = namedtuple(
@@ -45,6 +46,13 @@ VAESolverParams = namedtuple(
         'device',                                   # Device: cuda or cpu
         'learning_rate',                            # Float: learning rate
         'betas',                                    # Tuple(float, float): Adam parameter
+        'retrain_strategy',                         # Str: retrain strategy:
+                                                    # - "queue": use the best formulas (queue) generated so far to
+                                                    # retrain the model
+                                                    # - "last_steps": use the best formulas from the last
+                                                    # |use_n_last_steps| to retrain the model
+        'queue_size',                               # Int: the size of the queue to use, when using
+                                                    # |retrain_strategy| == "queue"
         'use_n_last_steps',                         # Int: Use best formulas generated on last |use_n_last_steps| epochs
                                                     # for training and for percentile calculation
         'percentile',                               # Int: Use |percentile| best formulas for retraining
@@ -105,6 +113,8 @@ VAESolverParams.__new__.__defaults__ = (
     torch.device("cuda:0"),                         # device
     0.0005,                                         # learning_rate
     (0.5, 0.999),                                   # betas
+    'last_steps',                                   # retrain_strategy
+    256,                                            # queue_size
     5,                                              # use_n_last_steps
     20,                                             # percentile
     2000,                                           # n_formulas_to_sample
@@ -144,8 +154,11 @@ class VAESolver(BaseSolver):
         if self.params.create_pretrain_dataset:
             self._create_pretrain_dataset(strategy='node_sample')
 
-        self.stats = FormulaStatistics(use_n_last_steps=self.params.use_n_last_steps,
-                                       percentile=self.params.percentile)
+        if self.params.retrain_strategy == 'last_steps':
+            self.stats = FormulaStatisticsLastN(use_n_last_steps=self.params.use_n_last_steps,
+                                                percentile=self.params.percentile)
+        if self.params.retrain_strategy == 'queue':
+            self.stats = FormulaStatisticsQueue(self.params.queue_size)
 
         model_params = model.ModelParams(vocab_size=len(self._ind2token), device=self.params.device,
                                          **self.params.model_params)
@@ -316,7 +329,7 @@ class VAESolver(BaseSolver):
                     param.add_(-noise)
 
 
-class FormulaStatistics:
+class FormulaStatisticsLastN:
     def __init__(self, use_n_last_steps, percentile):
         self.reconstructed_formulas = []
         self.last_n_best_formulas = []
@@ -343,3 +356,25 @@ class FormulaStatistics:
     def write_last_n_to_file(self, filename):
         with open(filename, 'w') as f:
             f.write('\n'.join(self.last_n_best_formulas))
+
+
+class FormulaStatisticsQueue:
+    def __init__(self, queue_size):
+        self.queue_size = queue_size
+        self.formulas = []
+        self.mses = []
+
+    def save_best_samples(self, sampled_mses, sampled_formulas):
+
+        all_mses = self.mses + sampled_mses
+        all_formulas = self.formulas + sampled_formulas
+
+        sorted_pairs = sorted(zip(all_mses, all_formulas), key=lambda x: x[0])[:self.queue_size]
+        pairs = random.shuffle(sorted_pairs)
+
+        self.mses = [x[0] for x in pairs]
+        self.formulas = [x[1] for x in pairs]
+
+    def write_last_n_to_file(self, filename):
+        with open(filename, 'w') as f:
+            f.write('\n'.join(self.formulas))
