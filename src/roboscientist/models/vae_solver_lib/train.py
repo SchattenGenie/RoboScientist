@@ -13,10 +13,13 @@ def build_single_batch_from_formulas_list(formulas_list, solver):
     batch_in, batch_out = [], []
     max_len = max([len(f) for f in formulas_list])
     for f in formulas_list:
-        f_idx = [solver._token2ind[t] for t in f]
-        padding = [solver._token2ind[config.PADDING]] * (max_len - len(f_idx))
-        batch_in.append([solver._token2ind[config.START_OF_SEQUENCE]] + f_idx + padding)
-        batch_out.append(f_idx + [solver._token2ind[config.END_OF_SEQUENCE]] + padding)
+        try:
+            f_idx = [solver._token2ind[t] for t in f]
+            padding = [solver._token2ind[config.PADDING]] * (max_len - len(f_idx))
+            batch_in.append([solver._token2ind[config.START_OF_SEQUENCE]] + f_idx + padding)
+            batch_out.append(f_idx + [solver._token2ind[config.END_OF_SEQUENCE]] + padding)
+        except:
+            print(f'Failed to add formula to single batch {f}')
     # we transpose here to make it compatible with LSTM input
     return torch.LongTensor(batch_in).T.contiguous().to(solver.params.device), torch.LongTensor(batch_out).T.contiguous(
 
