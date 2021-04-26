@@ -364,6 +364,9 @@ class FormulaStatisticsQueue:
         self.formulas = []
         self.mses = []
 
+    def clear_the_oldest_step(self):
+        pass
+
     def save_best_samples(self, sampled_mses, sampled_formulas):
 
         all_mses = self.mses + sampled_mses
