@@ -36,7 +36,7 @@ def build_ordered_batches(formula_file, solver):
                 f_to_eval = line.split()
                 formulas.append(line.split())
                 f_to_eval = [float(x) if x in solver.params.float_constants else x for x in f_to_eval]
-                f_to_eval = equations_utils.infix_to_expr(f_to_eval)
+                f_to_eval = equations_utils.infix_to_expr(f_to_eval, solver.params.arities)
                 f_to_eval = equations_base.Equation(f_to_eval)
                 constants = optimize_constants.optimize_constants(f_to_eval, solver.xs, solver.ys)
                 y = f_to_eval.func(solver.xs.reshape(-1, 1), constants)
