@@ -272,7 +272,7 @@ def expr_to_infix(expr, mul_add_arity_fixed=False):
     return pre, pre_arity
 
 
-def postfix_to_expr(post, post_arity=None):
+def postfix_to_expr(post, post_arity=None, func_to_arity=None):
     """
     Returns expression from polish notation
     https://en.wikipedia.org/wiki/Shunting-yard_algorithm
@@ -293,13 +293,17 @@ def postfix_to_expr(post, post_arity=None):
         for arg in post:
             func = snp.sympify(arg)
             try:
-                arity = get_arity(func)
+                if func_to_arity is not None and arg in func_to_arity:
+                    arity = func_to_arity[arg]
+                else:
+                    arity = get_arity(func)
             except:
                 arity = 0
             if arity is None:
                 post_arity.append(2)
             else:
                 post_arity.append(arity)
+    print(post_arity)
 
     for arg, arg_arity in zip(post, post_arity):
         if arg_arity == 0:
@@ -315,12 +319,13 @@ def postfix_to_expr(post, post_arity=None):
                 ")"
             ]
             expr = "".join(expr)
+            print(stack)
             stack.append(expr)
 
     return snp.sympify(stack[0])
 
 
-def infix_to_expr(pre, pre_arity=None, evaluate=True):
+def infix_to_expr(pre, pre_arity=None, evaluate=True, func_to_arity=None):
     """
     Returns expression from polish notation
     https://en.wikipedia.org/wiki/Shunting-yard_algorithm
@@ -328,4 +333,4 @@ def infix_to_expr(pre, pre_arity=None, evaluate=True):
     post_arity = copy(pre_arity)
     if post_arity is not None:
         post_arity = post_arity[::-1]
-    return postfix_to_expr(pre[::-1], post_arity)
+    return postfix_to_expr(pre[::-1], post_arity, func_to_arity)
