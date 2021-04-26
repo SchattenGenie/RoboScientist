@@ -63,6 +63,7 @@ VAESolverParams = namedtuple(
         'add_noise_every_n_steps',                  # Int: Add noise to model on every |add_noise_every_n_steps| epoch
 
         # files
+        'retrain_file',                             # Str: File to retrain the model. Used for retraining stage
         'file_to_sample',                           # Str: File to sample formulas to. Used for retraining stage
         'pretrain_train_file',                      # Str: File with pretrain train formulas.
                                                     # If not |create_pretrain_dataset|, this will be used to pretrain
@@ -121,6 +122,7 @@ VAESolverParams.__new__.__defaults__ = (
     False,                                          # add_noise_to_model_params
     0.01,                                           # noise_coef
     5,                                              # add_noise_every_n_steps
+    'retrain',                                      # retrain_file
     'sample',                                       # file_to_sample
     'train',                                        # pretrain_train_file
     'val',                                          # pretrain_val_file
@@ -229,9 +231,9 @@ class VAESolver(BaseSolver):
 
         self.stats.save_best_samples(sampled_mses=valid_mses, sampled_formulas=valid_formulas)
 
-        self.stats.write_last_n_to_file(self.params.file_to_sample)
+        self.stats.write_last_n_to_file(self.params.retrain_file)
 
-        train_batches, _ = train.build_ordered_batches(self.params.file_to_sample, solver=self)
+        train_batches, _ = train.build_ordered_batches(self.params.retrain_file, solver=self)
 
         if not self.params.no_retrain:
             train_losses, valid_losses = train.run_epoch(self.model, self.optimizer, train_batches, train_batches,
