@@ -329,6 +329,22 @@ def infix_to_expr(pre, pre_arity=None, evaluate=True, func_to_arity=None):
     https://en.wikipedia.org/wiki/Shunting-yard_algorithm
     """
     post_arity = copy(pre_arity)
+
+    pre_modified = []
+    for arg in pre:
+        if arg == 'Div':
+            pre_modified.append('Mul')
+            pre_modified.append('Pow')
+            pre_modified.append(-1)
+        elif arg == 'Sub':
+            pre_modified.append('Add')
+            pre_modified.append('Mul')
+            pre_modified.append(-1)
+        else:
+            pre_modified.append(arg)
+        print(pre_modified)
+    print(pre_modified)
+
     if post_arity is not None:
         post_arity = post_arity[::-1]
-    return postfix_to_expr(pre[::-1], post_arity, func_to_arity)
+    return postfix_to_expr(pre_modified[::-1], post_arity, func_to_arity)
