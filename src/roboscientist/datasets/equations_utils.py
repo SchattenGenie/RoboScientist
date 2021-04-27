@@ -272,12 +272,13 @@ def expr_to_infix(expr, mul_add_arity_fixed=False):
     return pre, pre_arity
 
 
-def postfix_to_expr(post, post_arity=None, func_to_arity=None):
+def postfix_to_expr(post, post_arity=None):
     """
     Returns expression from polish notation
     https://en.wikipedia.org/wiki/Shunting-yard_algorithm
     # TODO: fix docs here
     """
+
     from sympy.core.function import arity as get_arity
 
     stack = []
@@ -293,10 +294,7 @@ def postfix_to_expr(post, post_arity=None, func_to_arity=None):
         for arg in post:
             func = snp.sympify(arg)
             try:
-                if func_to_arity is not None and arg in func_to_arity:
-                    arity = func_to_arity[arg]
-                else:
-                    arity = get_arity(func)
+                arity = get_arity(func)
             except:
                 arity = 0
             if arity is None:
@@ -330,6 +328,58 @@ def infix_to_expr(pre, pre_arity=None, evaluate=True, func_to_arity=None):
     """
     post_arity = copy(pre_arity)
 
+    if post_arity is not None:
+        post_arity = post_arity[::-1]
+    return postfix_to_expr(pre[::-1], post_arity, func_to_arity)
+
+
+def postfix_to_expr_with_arities(post, func_to_arity):
+    """
+    Returns expression from polish notation
+    https://en.wikipedia.org/wiki/Shunting-yard_algorithm
+    # TODO: fix docs here
+    """
+
+    stack = []
+
+    def symbol_or_constant(x):
+        if isinstance(x, str) and "Symbol" not in x:
+            return "Symbol('{}')".format(x)
+        else:
+            return str(x)
+
+    post_arity = []
+    for arg in post:
+        if func_to_arity is not None and arg in func_to_arity:
+            arity = func_to_arity[arg]
+        else:
+            arity = 0
+        post_arity.append(arity)
+
+    for arg, arg_arity in zip(post, post_arity):
+        if arg_arity == 0:
+            stack.append(symbol_or_constant(arg))
+        else:
+            stack_temporary = []
+            for _ in range(arg_arity):
+                stack_temporary.append(stack.pop())
+            expr = [
+                arg,
+                "(",
+                ",".join([_arg for _arg in stack_temporary[::-1]]),
+                ")"
+            ]
+            expr = "".join(expr)
+            stack.append(expr)
+
+    return snp.sympify(stack[0])
+
+
+def infix_to_expr_with_arities(pre, func_to_arity):
+    """
+    Returns expression from polish notation
+    https://en.wikipedia.org/wiki/Shunting-yard_algorithm
+    """
     pre_modified = []
     for arg in pre:
         if arg == 'Div':
@@ -342,9 +392,5 @@ def infix_to_expr(pre, pre_arity=None, evaluate=True, func_to_arity=None):
             pre_modified.append(-1)
         else:
             pre_modified.append(arg)
-        # print(pre_modified)
-    # print(pre_modified)
 
-    if post_arity is not None:
-        post_arity = post_arity[::-1]
-    return postfix_to_expr(pre_modified[::-1], post_arity, func_to_arity)
+    return postfix_to_expr(pre_modified[::-1], func_to_arity)
