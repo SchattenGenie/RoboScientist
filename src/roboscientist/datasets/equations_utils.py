@@ -342,8 +342,8 @@ def infix_to_expr(pre, pre_arity=None, evaluate=True, func_to_arity=None):
             pre_modified.append(-1)
         else:
             pre_modified.append(arg)
-        print(pre_modified)
-    print(pre_modified)
+        # print(pre_modified)
+    # print(pre_modified)
 
     if post_arity is not None:
         post_arity = post_arity[::-1]
