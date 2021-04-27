@@ -330,7 +330,7 @@ def infix_to_expr(pre, pre_arity=None, evaluate=True, func_to_arity=None):
 
     if post_arity is not None:
         post_arity = post_arity[::-1]
-    return postfix_to_expr(pre[::-1], post_arity, func_to_arity)
+    return postfix_to_expr(pre[::-1], post_arity)
 
 
 def postfix_to_expr_with_arities(post, func_to_arity):
@@ -393,4 +393,4 @@ def infix_to_expr_with_arities(pre, func_to_arity):
         else:
             pre_modified.append(arg)
 
-    return postfix_to_expr(pre_modified[::-1], func_to_arity)
+    return postfix_to_expr_with_arities(pre_modified[::-1], func_to_arity)
