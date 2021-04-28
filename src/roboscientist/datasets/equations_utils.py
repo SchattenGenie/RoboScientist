@@ -329,3 +329,66 @@ def infix_to_expr(pre, pre_arity=None, evaluate=True):
     if post_arity is not None:
         post_arity = post_arity[::-1]
     return postfix_to_expr(pre[::-1], post_arity)
+
+
+def postfix_to_expr_with_arities(post, func_to_arity):
+    """
+    Returns expression from polish notation
+    https://en.wikipedia.org/wiki/Shunting-yard_algorithm
+    # TODO: fix docs here
+    """
+
+    stack = []
+
+    def symbol_or_constant(x):
+        if isinstance(x, str) and "Symbol" not in x:
+            return "Symbol('{}')".format(x)
+        else:
+            return str(x)
+
+    post_arity = []
+    for arg in post:
+        if func_to_arity is not None and arg in func_to_arity:
+            arity = func_to_arity[arg]
+        else:
+            arity = 0
+        post_arity.append(arity)
+
+    for arg, arg_arity in zip(post, post_arity):
+        if arg_arity == 0:
+            stack.append(symbol_or_constant(arg))
+        else:
+            stack_temporary = []
+            for _ in range(arg_arity):
+                stack_temporary.append(stack.pop())
+            expr = [
+                arg,
+                "(",
+                ",".join([_arg for _arg in stack_temporary[::-1]]),
+                ")"
+            ]
+            expr = "".join(expr)
+            stack.append(expr)
+
+    return snp.sympify(stack[0])
+
+
+def infix_to_expr_with_arities(pre, func_to_arity):
+    """
+    Returns expression from polish notation
+    https://en.wikipedia.org/wiki/Shunting-yard_algorithm
+    """
+    pre_modified = []
+    for arg in pre:
+        if arg == 'Div':
+            pre_modified.append('Mul')
+            pre_modified.append('Pow')
+            pre_modified.append(-1)
+        elif arg == 'Sub':
+            pre_modified.append('Add')
+            pre_modified.append('Mul')
+            pre_modified.append(-1)
+        else:
+            pre_modified.append(arg)
+
+    return postfix_to_expr_with_arities(pre_modified[::-1], func_to_arity)
