@@ -39,15 +39,11 @@ def build_ordered_batches(formula_file, solver):
             total_count += 1
             try:
                 f_to_eval = line.split()
-                # print(f_to_eval)
                 formulas.append(line.split())
                 f_to_eval = [float(x) if x in solver.params.float_constants else x for x in f_to_eval]
-                # print(f_to_eval)
                 f_to_eval = equations_utils.infix_to_expr_with_arities(f_to_eval, solver.params.arities)
                 f_to_eval = equations_base.Equation(f_to_eval)
                 constants = optimize_constants.optimize_constants(f_to_eval, solver.xs, solver.ys)
-                # print(f_to_eval)
-                # print(constants)
                 y = f_to_eval.func(solver.xs.reshape(-1, 1), constants)
                 Xs.append(solver.xs.reshape(-1, 1))
                 ys.append(y.reshape(-1, 1))

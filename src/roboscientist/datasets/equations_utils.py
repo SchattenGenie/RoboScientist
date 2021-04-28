@@ -278,7 +278,6 @@ def postfix_to_expr(post, post_arity=None):
     https://en.wikipedia.org/wiki/Shunting-yard_algorithm
     # TODO: fix docs here
     """
-
     from sympy.core.function import arity as get_arity
 
     stack = []
@@ -321,13 +320,12 @@ def postfix_to_expr(post, post_arity=None):
     return snp.sympify(stack[0])
 
 
-def infix_to_expr(pre, pre_arity=None, evaluate=True, func_to_arity=None):
+def infix_to_expr(pre, pre_arity=None, evaluate=True):
     """
     Returns expression from polish notation
     https://en.wikipedia.org/wiki/Shunting-yard_algorithm
     """
     post_arity = copy(pre_arity)
-
     if post_arity is not None:
         post_arity = post_arity[::-1]
     return postfix_to_expr(pre[::-1], post_arity)
