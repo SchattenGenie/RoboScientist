@@ -25,8 +25,8 @@ def build_single_batch_from_formulas_list(formulas_list, solver, batch_Xs, batch
             batch_ys.pop(i)
     print(f'Failed to add formula to single batch {t_c}/{len(formulas_list)}')
     # we transpose here to make it compatible with LSTM input
-    return torch.LongTensor(batch_in).T.contiguous().to(solver.params.device), \
-           torch.LongTensor(batch_out).T.contiguous().to(solver.params.device), \
+    return (torch.LongTensor(batch_in).T.contiguous().to(solver.params.device), \
+           torch.LongTensor(batch_out).T.contiguous().to(solver.params.device)), \
            np.array(batch_Xs), np.array(batch_ys)
 
 
