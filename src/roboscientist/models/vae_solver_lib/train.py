@@ -9,11 +9,11 @@ import random
 import torch.nn.functional as F
 
 
-def build_single_batch_from_formulas_list(formulas_list, solver):
+def build_single_batch_from_formulas_list(formulas_list, solver, batch_Xs, batch_ys):
     batch_in, batch_out = [], []
     max_len = max([len(f) for f in formulas_list])
     t_c = 0
-    for f in formulas_list:
+    for i, f in enumerate(formulas_list):
         try:
             f_idx = [solver._token2ind[t] for t in f]
             padding = [solver._token2ind[config.PADDING]] * (max_len - len(f_idx))
@@ -21,11 +21,13 @@ def build_single_batch_from_formulas_list(formulas_list, solver):
             batch_out.append(f_idx + [solver._token2ind[config.END_OF_SEQUENCE]] + padding)
         except:
             t_c +=1
+            batch_Xs.pop(i)
+            batch_ys.pop(i)
     print(f'Failed to add formula to single batch {t_c}/{len(formulas_list)}')
     # we transpose here to make it compatible with LSTM input
-    return torch.LongTensor(batch_in).T.contiguous().to(solver.params.device), torch.LongTensor(batch_out).T.contiguous(
-
-    ).to(solver.params.device)
+    return torch.LongTensor(batch_in).T.contiguous().to(solver.params.device), \
+           torch.LongTensor(batch_out).T.contiguous().to(solver.params.device), \
+           np.array(batch_Xs), np.array(batch_ys)
 
 
 def build_ordered_batches(formula_file, solver):
@@ -58,8 +60,7 @@ def build_ordered_batches(formula_file, solver):
         batch_formulas = sorted_formulas[batch_ind * solver.params.batch_size:(batch_ind + 1) * solver.params.batch_size]
         batch_Xs = sorted_Xs[batch_ind * solver.params.batch_size:(batch_ind + 1) * solver.params.batch_size]
         batch_ys = sorted_ys[batch_ind * solver.params.batch_size:(batch_ind + 1) * solver.params.batch_size]
-        batches.append((build_single_batch_from_formulas_list(batch_formulas, solver),
-                        np.array(batch_Xs), np.array(batch_ys)))
+        batches.append((build_single_batch_from_formulas_list(batch_formulas, solver, batch_Xs, batch_ys)))
     return batches, order
 
 
