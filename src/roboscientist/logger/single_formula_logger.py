@@ -45,7 +45,7 @@ class SingleFormulaLogger(BaseLogger):
         super().__init__()
         self._project = project_name
         self._experiment_name = experiment_name
-        wandb.init(project=self._project, name=experiment_name, mode="online")
+        wandb.init(project=self._project, name=experiment_name, mode="offline")
 
         config_table = wandb.Table(columns=[*sorted(experiment_config.keys())])
         config_table.add_data(*[experiment_config[k] for k in sorted(experiment_config.keys())])
