@@ -13,6 +13,7 @@ def build_single_batch_from_formulas_list(formulas_list, solver, batch_Xs, batch
     batch_in, batch_out = [], []
     max_len = max([len(f) for f in formulas_list])
     t_c = 0
+    # print(len(batch_Xs), type(batch_Xs))
     for i, f in enumerate(formulas_list):
         try:
             f_idx = [solver._token2ind[t] for t in f]
@@ -60,7 +61,7 @@ def build_ordered_batches(formula_file, solver):
         batch_formulas = sorted_formulas[batch_ind * solver.params.batch_size:(batch_ind + 1) * solver.params.batch_size]
         batch_Xs = sorted_Xs[batch_ind * solver.params.batch_size:(batch_ind + 1) * solver.params.batch_size]
         batch_ys = sorted_ys[batch_ind * solver.params.batch_size:(batch_ind + 1) * solver.params.batch_size]
-        batches.append((build_single_batch_from_formulas_list(batch_formulas, solver, batch_Xs, batch_ys)))
+        batches.append((build_single_batch_from_formulas_list(batch_formulas, solver, list(batch_Xs), list(batch_ys))))
     return batches, order
 
 
