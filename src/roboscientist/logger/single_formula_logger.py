@@ -108,9 +108,16 @@ class SingleFormulaLogger(BaseLogger):
         for count in [1, 10, 25, 50, 100, 250, 500]:
             wandb_log[f'epoch_mean_mse_top_{count}'] = np.mean(self._ordered_current_epoch_best_mses[:count])
             wandb_log[f'best_mean_mse_top_{count}'] = np.mean(self._ordered_best_mses[:count])
-            wandb_log[f'epoch_log_mean_mse_top_{count}'] = np.log(
-                np.mean(self._ordered_current_epoch_best_mses[:count]))
-            wandb_log[f'best_log_mean_mse_top_{count}'] = np.log(np.mean(self._ordered_best_mses[:count]))
+            if np.mean(self._ordered_current_epoch_best_mses[:count]) != 0:
+                wandb_log[f'epoch_log_mean_mse_top_{count}'] = np.log(
+                    np.mean(self._ordered_current_epoch_best_mses[:count]))
+            else:
+                wandb_log[f'epoch_log_mean_mse_top_{count}'] = -100
+            if np.mean(self._ordered_best_mses[:count]) != 0:
+                wandb_log[f'best_log_mean_mse_top_{count}'] = np.log(
+                    np.mean(self._ordered_best_mses[:count]))
+            else:
+                wandb_log[f'best_log_mean_mse_top_{count}'] = -100
 
         n_formulas_to_show = 10
         for r, (f, m) in enumerate(zip(self._ordered_best_formulas[:n_formulas_to_show],

@@ -249,7 +249,7 @@ class VAESolver(BaseSolver):
             custom_log['retrain_val_kl_loss'] = v_kl
         if self.params.continue_training_on_pretrain_dataset:
             train.pretrain(n_pretrain_steps=1, model=self.model, optimizer=self.optimizer,
-                           pretrain_batches=train_batches, pretrain_val_batches=self.valid_batches,
+                           pretrain_batches=self.pretrain_batches, pretrain_val_batches=self.valid_batches,
                            kl_coef=self.params.kl_coef)
 
         # TODO(julia) add active learning
