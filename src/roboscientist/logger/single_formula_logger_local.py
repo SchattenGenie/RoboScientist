@@ -12,8 +12,10 @@ class SingleFormulaLoggerLocal(BaseLogger):
         super().__init__()
 
         self._dir = dir
+        if not os.path.exists(dir):
+            os.makedirs(dir)
 
-        config_table = pd.DataFrame.from_dict(experiment_config)
+        config_table = pd.DataFrame(experiment_config, index=[0])
         config_table.to_csv(os.path.join(self._dir, 'config.csv'))
 
         self._best_formulas_table = pd.DataFrame(columns=['epoch', 'rank', 'formula', 'mse'])
@@ -92,13 +94,13 @@ class SingleFormulaLoggerLocal(BaseLogger):
                 best_log_mses_row[f'top_{count}'] = -100
 
         self._best_log_mses_table = self._best_log_mses_table.append(
-            pd.DataFrame.from_dict(best_log_mses_row), ignore_index=True)
+            pd.DataFrame(best_log_mses_row, index=[0]), ignore_index=True)
         self._best_mses_table = self._best_mses_table.append(
-            pd.DataFrame.from_dict(best_mses_row), ignore_index=True)
+            pd.DataFrame(best_mses_row, index=[0]), ignore_index=True)
         self._epoch_log_mses_table = self._epoch_log_mses_table.append(
-            pd.DataFrame.from_dict(epoch_log_mses_row), ignore_index=True)
+            pd.DataFrame(epoch_log_mses_row, index=[0]), ignore_index=True)
         self._epoch_mses_table = self._epoch_mses_table.append(
-            pd.DataFrame.from_dict(epoch_mses_row), ignore_index=True)
+            pd.DataFrame(epoch_mses_row, index=[0]), ignore_index=True)
 
         n_formulas_to_show = 10
         best_formulas_row = {'epoch': [], 'rank': [], 'formula': [], 'mse': []}
@@ -109,7 +111,7 @@ class SingleFormulaLoggerLocal(BaseLogger):
             best_formulas_row['formula'].append(f)
             best_formulas_row['mse'].append(m)
         self._best_formulas_table = self._best_formulas_table.append(
-            pd.DataFrame.from_dict(best_formulas_row), ignore_index=True)
+            pd.DataFrame(best_formulas_row), ignore_index=True)
 
         epoch_formulas_row = {'epoch': [], 'rank': [], 'formula': [], 'mse': []}
         for r, (f, m) in enumerate(zip(self._ordered_current_epoch_best_formulas[:n_formulas_to_show],
@@ -119,7 +121,7 @@ class SingleFormulaLoggerLocal(BaseLogger):
             epoch_formulas_row['formula'].append(f)
             epoch_formulas_row['mse'].append(m)
         self._epoch_best_formulas_table = self._epoch_best_formulas_table.append(
-            pd.DataFrame.from_dict(epoch_formulas_row), ignore_index=True)
+            pd.DataFrame(epoch_formulas_row), ignore_index=True)
 
         self._best_log_mses_table.to_csv(os.path.join(self._dir, 'best_log_mses_table'))
         self._best_mses_table.to_csv(os.path.join(self._dir, 'best_mses_table'))
