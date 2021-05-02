@@ -272,6 +272,37 @@ def last_1_epochs_experiment_6(exp_name):
     vs.solve(f, epochs=50)
 
 
+def _create_checkpoint_no_constants_0():
+    X = np.linspace(0.1, 2, num=100).reshape(-1, 1)
+    f = equations_utils.infix_to_expr(
+        ['Add', 'Add', 'Mul', "Add", "sin", "Symbol('x0')", "Symbol('x0')", 'sin', "Symbol('x0')", 'cos', 'cos', "Symbol('x0')",
+         "Symbol('x0')"])
+    y_true = f.func(X)
+
+    vae_solver_params = VAESolverParams(
+        device=torch.device('cuda'),
+        true_formula=None,
+        # optimizable_constants=["Symbol('const%d')" % i for i in range(15)],
+        kl_coef=0.5,
+        percentile=5,
+        initial_xs=X,
+        initial_ys=y_true,
+        use_n_last_steps=5,
+    )
+
+    logger_init_conf = {
+        'true formula_repr': str(f),
+        # **vae_solver_params._asdict(),
+    }
+    logger_init_conf.update(vae_solver_params._asdict())
+
+    logger = single_formula_logger.SingleFormulaLogger('tmp',
+                                                       'tmp',
+                                                       logger_init_conf)
+    vs = VAESolver(logger, None, vae_solver_params)
+    vs.create_checkpoint('checkpoint_sin_cos_mul_add_14_no_constants')
+
+
 # def last_5_epochs_experiment_no_constants_7(exp_name):
 #     with open('wandb_key') as f:
 #         os.environ["WANDB_API_KEY"] = f.read().strip()
