@@ -61,7 +61,11 @@ def build_ordered_batches(formula_file, solver):
         batch_formulas = sorted_formulas[batch_ind * solver.params.batch_size:(batch_ind + 1) * solver.params.batch_size]
         batch_Xs = sorted_Xs[batch_ind * solver.params.batch_size:(batch_ind + 1) * solver.params.batch_size]
         batch_ys = sorted_ys[batch_ind * solver.params.batch_size:(batch_ind + 1) * solver.params.batch_size]
-        batches.append((build_single_batch_from_formulas_list(batch_formulas, solver, list(batch_Xs), list(batch_ys))))
+        new_batch = build_single_batch_from_formulas_list(batch_formulas, solver, list(batch_Xs), list(batch_ys))
+        if len(new_batch[1]) > 0:
+            batches.append(new_batch)
+        else:
+            print('0 formulas in batch -> skipping')
     return batches, order
 
 
