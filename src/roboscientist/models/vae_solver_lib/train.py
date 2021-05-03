@@ -50,12 +50,13 @@ def build_ordered_batches(formula_file, solver):
                 f_to_eval = equations_utils.infix_to_expr_with_arities(f_to_eval, solver.params.arities)
                 f_to_eval = equations_base.Equation(f_to_eval)
                 constants = optimize_constants.optimize_constants(f_to_eval, solver.xs, solver.ys)
-                y = f_to_eval.func(solver.xs.reshape(-1, 1), constants)
-                Xs.append(solver.xs.reshape(-1, 1))
+                y = f_to_eval.func(solver.xs.reshape(-1, solver.params.model_params['x_dim']), constants)
+                if not np.isfinite(y).all():
+                    raise 42
+                Xs.append(solver.xs.reshape(-1, solver.params.model_params['x_dim']))
                 ys.append(y.reshape(-1, 1))
             except:
                 t_c += 1
-    print(f'Failed to add formula to batch {t_c}/{total_count}')
 
     batches = []
     order = range(len(formulas))  # This will be necessary for reconstruction
