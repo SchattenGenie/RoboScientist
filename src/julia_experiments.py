@@ -594,10 +594,9 @@ def last_5_epochs_experiment_no_constants_more_operations_two_variables_formula_
 
     logger = single_formula_logger.SingleFormulaLogger('some_experiments',
                                                        exp_name + \
-                                                       'TO_DELETE',
+                                                       'last_5_epochs_experiment_no_constants_more_operations_2d_formula_1_12',
                                                        logger_init_conf)
-    vs = VAESolver(logger, None, vae_solver_params)
-    vs.create_checkpoint('checkpoint_div_sub_sin_cos_mul_add_no_constants_2d')
+    vs = VAESolver(logger, 'checkpoint_div_sub_sin_cos_mul_add_no_constants_2d', vae_solver_params)
     vs.solve(f, epochs=100)
 
 
