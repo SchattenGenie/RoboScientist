@@ -14,8 +14,8 @@ def build_single_batch_from_formulas_list(formulas_list, solver, batch_Xs, batch
     batch_in, batch_out = [], []
     max_len = max([len(f) for f in formulas_list])
     t_c = 0
-    new_batch_Xs = deepcopy(batch_Xs)
-    new_batch_ys = deepcopy(batch_ys)
+    new_batch_Xs = []
+    new_batch_ys = []
     # print(len(batch_Xs), type(batch_Xs))
     for i, f in enumerate(formulas_list):
         try:
