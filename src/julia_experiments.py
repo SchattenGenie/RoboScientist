@@ -600,7 +600,6 @@ def tmp():
 
 
 if __name__ == '__main__':
-    # last_5_epochs_experiment_no_constants_2_formula_8('COLAB_')
     # check_train()
     # tmp()
     last_5_epochs_experiment_no_constants_more_operations_formula_1_10('COLAB_')
