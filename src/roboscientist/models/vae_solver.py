@@ -212,18 +212,30 @@ class VAESolver(BaseSolver):
             for line in f:
                 n_all += 1
                 try:
-                    f_to_eval = formula_infix_utils.clear_redundant_operations(line.strip().split(),
+
+                    def isfloat(value):
+                        try:
+                            float(value)
+                            return True
+                        except ValueError:
+                            return False
+
+                    f_to_eval = line.strip().split()
+                    f_to_eval = formula_infix_utils.clear_redundant_operations(f_to_eval,
                                                                                self.params.functions,
                                                                                self.params.arities)
-                    f_to_eval = [float(x) if x in self.params.float_constants else x for x in f_to_eval]
+                    f_to_eval = [float(x) if isfloat(x) else x for x in f_to_eval]
                     f_to_eval = equations_utils.infix_to_expr_with_arities(f_to_eval, self.params.arities)
                     f_to_eval = equations_base.Equation(f_to_eval)
                     constants = optimize_constants.optimize_constants(f_to_eval, self.xs, self.ys)
                     y = f_to_eval.func(self.xs.reshape(-1, 1), constants)
+                    mse = mean_squared_error(y, self.ys)
                     valid_formulas.append(line.strip())
-                    valid_mses.append(mean_squared_error(y, self.ys))
+                    valid_mses.append(mse)
                     valid_equations.append(f_to_eval.subs(constants))
                 except:
+                    # f_to_eval = line.strip().split()
+                    # print(f_to_eval)
                     continue
         custom_log['unique_valid_formulas_sampled_percentage'] = len(valid_formulas) / self.params.n_formulas_to_sample
         custom_log['unique_formulas_sampled_percentage'] = n_all / self.params.n_formulas_to_sample
@@ -347,6 +359,7 @@ class FormulaStatisticsLastN:
     def save_best_samples(self, sampled_mses, sampled_formulas):
         mse_threshold = np.nanpercentile(sampled_mses + self.last_n_best_mses, self.percentile)
         epoch_best_mses = [x for x in sampled_mses if x < mse_threshold]
+        print(len(sampled_formulas), len(sampled_mses))
         epoch_best_formulas = [
             sampled_formulas[i] for i in range(len(sampled_formulas)) if sampled_mses[i] < mse_threshold]
         assert len(epoch_best_mses) == len(epoch_best_formulas)
