@@ -9,16 +9,17 @@ import time
 
 
 class BruteForceSolver(BaseSolver):
-    def __init__(self, logger, max_time=60 * 60 * 10, max_iters=2000, *args, **kwargs):
+    def __init__(self, logger, max_time=1, *args, **kwargs):
         self._max_time = max_time
-        self._max_iters = max_iters
         super().__init__(logger, *args, **kwargs)
 
     def _training_step(self, equation, epoch):
+        candidate_solutions = []
         X, y = equation.dataset
         # TODO: restart not from the start (generator)
-        candidates = brute_force_solver(X, y, max_time=self._max_time, max_iters=self._max_iters)
-        return Dataset(candidates), None
+        candidate_solution = brute_force_solver(X, y, max_time=self._max_time)
+        candidate_solutions.append(candidate_solution)
+        return Dataset(candidate_solutions), None
 
 
 def brute_force_solver(X: np.ndarray, y: np.ndarray, max_time=10, max_iters=None):
@@ -28,8 +29,6 @@ def brute_force_solver(X: np.ndarray, y: np.ndarray, max_time=10, max_iters=None
     best_candidate_equation = None
     time_start = time.time()
     iters = 0
-
-    candidates = []
 
     for candidate_equation in tqdm(brute_force_equation_generator(n_max=20, n_symbols=n_symbols)):
         iters += 1
@@ -43,11 +42,10 @@ def brute_force_solver(X: np.ndarray, y: np.ndarray, max_time=10, max_iters=None
         if err:
             continue
         else:
-            candidates.append(candidate_equation)
             if loss < best_loss:
                 best_loss = loss
                 best_candidate_equation = candidate_equation
-    return candidates
+    return best_candidate_equation
 
 
 def brute_force_equation_generator(n_max=5, n_symbols=2):

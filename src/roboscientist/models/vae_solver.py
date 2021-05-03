@@ -359,7 +359,6 @@ class FormulaStatisticsLastN:
     def save_best_samples(self, sampled_mses, sampled_formulas):
         mse_threshold = np.nanpercentile(sampled_mses + self.last_n_best_mses, self.percentile)
         epoch_best_mses = [x for x in sampled_mses if x < mse_threshold]
-        print(len(sampled_formulas), len(sampled_mses))
         epoch_best_formulas = [
             sampled_formulas[i] for i in range(len(sampled_formulas)) if sampled_mses[i] < mse_threshold]
         assert len(epoch_best_mses) == len(epoch_best_formulas)
