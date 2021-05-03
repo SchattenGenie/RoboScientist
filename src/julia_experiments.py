@@ -516,6 +516,89 @@ def last_5_epochs_experiment_no_constants_more_operations_formula_1_10(exp_name)
     vs.solve(f, epochs=100)
 
 
+def last_5_epochs_experiment_no_constants_more_operations_formula_2_11(exp_name):
+    with open('wandb_key') as f:
+        os.environ["WANDB_API_KEY"] = f.read().strip()
+    f = equations_utils.infix_to_expr_with_arities(
+        ['sin', 'Div', 'Mul', 'Add', 'sin', "Symbol('x0')", "Symbol('x0')", 'Add', 'sin', "Symbol('x0')",
+         "Symbol('x0')", "Add", "Symbol('x0')", "Symbol('x0')"],
+        func_to_arity={'sin': 1, 'cos': 1, 'Add': 2, 'Mul': 2, 'Sub': 2, 'Div': 2, 'Pow': 2})
+    f = equations_base.Equation(f, space=((0., 2.),))
+    f.add_observation(np.linspace(0.1, 2, num=100).reshape(-1, 1))
+    X = np.linspace(0.1, 2, num=100).reshape(-1, 1)
+    y_true = f.func(X)
+
+    vae_solver_params = VAESolverParams(
+        device=torch.device('cuda'),
+        true_formula=f,
+        kl_coef=0.5,
+        percentile=5,
+        initial_xs=X,
+        initial_ys=y_true,
+        functions=['sin', 'cos', 'Add', 'Mul', 'Sub', 'Div'],
+        arities={'sin': 1, 'cos': 1, 'Add': 2, 'Mul': 2, 'Sub': 2, 'Div': 2, 'Pow': 2},
+    )
+
+    logger_init_conf = {
+        'true formula_repr': str(f),
+        # **vae_solver_params._asdict(),
+    }
+    logger_init_conf.update(vae_solver_params._asdict())
+    logger_init_conf['device'] = 'gpu'
+    for key, item in logger_init_conf.items():
+        logger_init_conf[key] = str(item)
+
+    logger = single_formula_logger.SingleFormulaLogger('some_experiments',
+                                                       exp_name + \
+                                                       'last_5_epochs_experiment_no_constants_more_operations_formula_2_11',
+                                                       logger_init_conf)
+    vs = VAESolver(logger, 'checkpoint_div_sub_sin_cos_mul_add_no_constants', vae_solver_params)
+    vs.solve(f, epochs=100)
+
+
+def last_5_epochs_experiment_no_constants_more_operations_two_variables_formula_1_12(exp_name):
+    with open('wandb_key') as f:
+        os.environ["WANDB_API_KEY"] = f.read().strip()
+    f = equations_utils.infix_to_expr_with_arities(
+        ['sin', 'Add', "Symbol('x0')", "Symbol('x1')"],
+        func_to_arity={'sin': 1, 'cos': 1, 'Add': 2, 'Mul': 2, 'Sub': 2, 'Div': 2, 'Pow': 2})
+    f = equations_base.Equation(f, space=((0., 2.),(0., 2.),))
+    X = np.random.uniform(low=0.1, high=2, size=(100, 2))
+    f.add_observation(X)
+    y_true = f.func(X)
+
+    vae_solver_params = VAESolverParams(
+        device=torch.device('cuda'),
+        true_formula=f,
+        kl_coef=0.5,
+        percentile=5,
+        initial_xs=X,
+        initial_ys=y_true,
+        functions=['sin', 'cos', 'Add', 'Mul', 'Sub', 'Div'],
+        arities={'sin': 1, 'cos': 1, 'Add': 2, 'Mul': 2, 'Sub': 2, 'Div': 2, 'Pow': 2},
+        free_variables=["Symbol('x0')", "Symbol('x1')"],
+        model_params={'token_embedding_dim': 128, 'hidden_dim': 128,
+                      'encoder_layers_cnt': 1, 'decoder_layers_cnt': 1,
+                      'latent_dim': 8, 'x_dim': 2},
+    )
+
+    logger_init_conf = {
+        'true formula_repr': str(f),
+        # **vae_solver_params._asdict(),
+    }
+    logger_init_conf.update(vae_solver_params._asdict())
+    logger_init_conf['device'] = 'gpu'
+    for key, item in logger_init_conf.items():
+        logger_init_conf[key] = str(item)
+
+    logger = single_formula_logger.SingleFormulaLogger('some_experiments',
+                                                       exp_name + \
+                                                       'TO_DELETE',
+                                                       logger_init_conf)
+    vs = VAESolver(logger, None, vae_solver_params)
+    vs.solve(f, epochs=100)
+
+
 def check_train():
     f = equations_utils.infix_to_expr(
         ['Add', 'Add', 'Mul', "Add", "sin", "Symbol('x0')", "Symbol('x0')", 'sin', "Symbol('x0')", 'cos', 'cos',
@@ -602,4 +685,4 @@ def tmp():
 if __name__ == '__main__':
     # check_train()
     # tmp()
-    last_5_epochs_experiment_no_constants_more_operations_formula_1_10('COLAB_')
+    last_5_epochs_experiment_no_constants_more_operations_formula_2_11('COLAB_')
