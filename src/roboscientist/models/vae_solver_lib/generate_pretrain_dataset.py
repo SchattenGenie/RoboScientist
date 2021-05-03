@@ -1,6 +1,6 @@
 # TODO(julia): delete or rewrite this file
 
-from . import formula_infix_utils
+from. import formula_infix_utils
 
 import random
 import numpy as np
@@ -27,11 +27,11 @@ def generate_formula(all_tokens, max_len, functions, arities):
 
 def generate_pretrain_dataset(size, max_len, file=None, functions=None, arities=None, all_tokens=None):
     if all_tokens is None:
-        all_tokens = ['cos', 'sin', 'Add', 'Mul', "Symbol('x0')", "Symbol('const%d')"]
+        all_tokens = ['cos', 'sin', 'Add', 'Mul', "Symbol('x0')", 'Div', 'Sub']
     if functions is None:
-        functions = ['cos', 'sin', 'Add', 'Mul']
+        functions = ['cos', 'sin', 'Add', 'Mul', 'Div', 'Sub']
     if arities is None:
-        arities = {'cos': 1, 'sin': 1, 'Add': 2, 'Mul': 2}
+        arities = {'cos': 1, 'sin': 1, 'Add': 2, 'Mul': 2,  'Div': 2, 'Sub': 2}
     formulas = []
     while len(formulas) < size:
         new_formulas = [generate_formula(all_tokens, max_len, functions, arities) for _ in range(size)]
@@ -40,7 +40,7 @@ def generate_pretrain_dataset(size, max_len, file=None, functions=None, arities=
         new_formulas = [' '.join(f) for f in new_formulas]
         formulas += new_formulas
         formulas = list(np.unique(formulas))
-        # print(len(formulas))
+        print(len(formulas))
         formulas = formulas[:size]
 
     if file is not None:
@@ -50,5 +50,5 @@ def generate_pretrain_dataset(size, max_len, file=None, functions=None, arities=
 
 
 if __name__ == '__main__':
-    generate_pretrain_dataset(20000, 14, 'train_tttt')
-    generate_pretrain_dataset(10000, 14, 'val_tttt')
+    generate_pretrain_dataset(20000, 14, 'train_cos_sin_add_mul_div_sub_no_constants')
+    generate_pretrain_dataset(10000, 14, 'val_cos_sin_add_mul_div_sub_no_constants')

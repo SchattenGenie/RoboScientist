@@ -2,6 +2,7 @@ from . import config, optimize_constants
 from roboscientist.datasets import equations_utils, equations_base
 
 import numpy as np
+from copy import deepcopy
 
 
 import torch
@@ -13,6 +14,8 @@ def build_single_batch_from_formulas_list(formulas_list, solver, batch_Xs, batch
     batch_in, batch_out = [], []
     max_len = max([len(f) for f in formulas_list])
     t_c = 0
+    new_batch_Xs = []
+    new_batch_ys = []
     # print(len(batch_Xs), type(batch_Xs))
     for i, f in enumerate(formulas_list):
         try:
@@ -20,15 +23,15 @@ def build_single_batch_from_formulas_list(formulas_list, solver, batch_Xs, batch
             padding = [solver._token2ind[config.PADDING]] * (max_len - len(f_idx))
             batch_in.append([solver._token2ind[config.START_OF_SEQUENCE]] + f_idx + padding)
             batch_out.append(f_idx + [solver._token2ind[config.END_OF_SEQUENCE]] + padding)
+            new_batch_Xs.append(batch_Xs[i])
+            new_batch_ys.append(batch_ys[i])
         except:
             t_c +=1
-            batch_Xs.pop(i)
-            batch_ys.pop(i)
     print(f'Failed to add formula to single batch {t_c}/{len(formulas_list)}')
     # we transpose here to make it compatible with LSTM input
     return (torch.LongTensor(batch_in).T.contiguous().to(solver.params.device), \
            torch.LongTensor(batch_out).T.contiguous().to(solver.params.device)), \
-           np.array(batch_Xs), np.array(batch_ys)
+           np.array(new_batch_Xs), np.array(new_batch_ys)
 
 
 def build_ordered_batches(formula_file, solver):
