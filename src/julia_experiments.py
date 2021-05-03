@@ -386,21 +386,97 @@ def last_5_epochs_experiment_no_constants_2_formula_8(exp_name):
     vs.solve(f, epochs=50)
 
 
-def check_train():
-    # f = equations_utils.infix_to_expr(
-    #     ['Add', 'Add', 'Mul', "Add", "sin", "Symbol('x0')", "Symbol('x0')", 'sin', "Symbol('x0')", 'cos', 'cos',
-    #      "Symbol('x0')",
-    #      "Symbol('x0')"])
+def last_5_epochs_experiment_no_constants_9(exp_name):
+    with open('wandb_key') as f:
+        os.environ["WANDB_API_KEY"] = f.read().strip()
     f = equations_utils.infix_to_expr(
-        ['Add', 'cos', 'cos', 'cos', "Symbol('x0')", 'sin', 'sin', 'sin', 'Mul', 'cos', "Symbol('x0')", "Symbol('x0')"])
+        ['Mul', 'cos', 'cos', 'cos', 'cos', "Symbol('x0')", 'sin', 'sin', 'sin', "Symbol('x0')"])
     f = equations_base.Equation(f, space=((0., 2.),))
     f.add_observation(np.linspace(0.1, 2, num=100).reshape(-1, 1))
     X = np.linspace(0.1, 2, num=100).reshape(-1, 1)
     y_true = f.func(X)
 
+    vae_solver_params = VAESolverParams(
+        device=torch.device('cuda'),
+        true_formula=f,
+        kl_coef=0.5,
+        percentile=5,
+        initial_xs=X,
+        initial_ys=y_true,
+    )
+
+    logger_init_conf = {
+        'true formula_repr': str(f),
+        # **vae_solver_params._asdict(),
+    }
+    logger_init_conf.update(vae_solver_params._asdict())
+    logger_init_conf['device'] = 'gpu'
+    for key, item in logger_init_conf.items():
+        logger_init_conf[key] = str(item)
+
+    logger = single_formula_logger.SingleFormulaLogger('some_experiments',
+                                                       exp_name + 'last_5_epochs_experiment_no_constants_9_formula_3',
+                                                       logger_init_conf)
+    vs = VAESolver(logger, 'checkpoint_sin_cos_mul_add_14_no_constants', vae_solver_params)
+    vs.solve(f, epochs=50)
+
+
+def last_5_epochs_experiment_no_constants_more_operations_formula_1_10(exp_name):
+    with open('wandb_key') as f:
+        os.environ["WANDB_API_KEY"] = f.read().strip()
+    f = equations_utils.infix_to_expr_with_arities(
+        ['Div', "Symbol('x0')", 'Sub', "Symbol('x0')", 'cos', "Symbol('x0')"],
+        func_to_arity={})
+    f = equations_base.Equation(f, space=((0., 2.),))
+    f.add_observation(np.linspace(0.1, 2, num=100).reshape(-1, 1))
+    X = np.linspace(0.1, 2, num=100).reshape(-1, 1)
+    y_true = f.func(X)
+
+    vae_solver_params = VAESolverParams(
+        device=torch.device('cuda'),
+        true_formula=f,
+        kl_coef=0.5,
+        percentile=5,
+        initial_xs=X,
+        initial_ys=y_true,
+        functions=['sin', 'cos', 'Add', 'Mul', 'Sub', 'Div'],
+        arities={'sin': 1, 'cos': 1, 'Add': 2, 'Mul': 2, 'Sub': 2, 'Div': 2},
+        create_pretrain_dataset=True,
+    )
+
+    logger_init_conf = {
+        'true formula_repr': str(f),
+        # **vae_solver_params._asdict(),
+    }
+    logger_init_conf.update(vae_solver_params._asdict())
+    logger_init_conf['device'] = 'gpu'
+    for key, item in logger_init_conf.items():
+        logger_init_conf[key] = str(item)
+
+    logger = single_formula_logger.SingleFormulaLogger('some_experiments',
+                                                       exp_name + 'TO_DELETE',
+                                                       logger_init_conf)
+    vs = VAESolver(logger, None, vae_solver_params)
+    vs.solve(f, epochs=50)
+
+
+def check_train():
+    f = equations_utils.infix_to_expr(
+        ['Add', 'Add', 'Mul', "Add", "sin", "Symbol('x0')", "Symbol('x0')", 'sin', "Symbol('x0')", 'cos', 'cos',
+         "Symbol('x0')",
+         "Symbol('x0')"])
+    # f = equations_utils.infix_to_expr(
+    #     ['Add', 'cos', 'cos', 'cos', "Symbol('x0')", 'sin', 'sin', 'sin', 'Mul', 'cos', "Symbol('x0')", "Symbol('x0')"])
+    f = equations_base.Equation(f, space=((0., 2.),))
+    f.add_observation(np.linspace(0.1, 2, num=100).reshape(-1, 1))
+    X = np.linspace(0.1, 2, num=100).reshape(-1, 1)
+    y_true = f.func(X)
+    print(f)
+
     valid_formulas = []
     valid_mses = []
-    with open('roboscientist/models/vae_solver_lib/train_cos_sin_add_mul_no_constants') as f:
+    with open('roboscientist/models/vae_solver_lib/train_cos_sin_add_mul_no_constants') as f, open('tmp_mses', 'w'
+                                                                                                   ) as f_out:
         for i, line in enumerate(f):
             f_to_eval = line.strip().split()
             f_to_eval = equations_utils.infix_to_expr_with_arities(f_to_eval, {'Mul': 2, 'Add': 2, 'sin': 1,
@@ -410,6 +486,8 @@ def check_train():
             y = f_to_eval.func(X, None)
             valid_formulas.append(line.strip())
             valid_mses.append(mean_squared_error(y, y_true))
+            f_out.write(str(mean_squared_error(y, y_true)))
+            f_out.write('\n')
             if i % 500 == 0:
                 print(i, np.min(valid_mses))
     print(list(sorted(zip(valid_mses, valid_formulas)))[:10])
@@ -419,8 +497,8 @@ def test_logger_local(exp_name):
     f = equations_utils.infix_to_expr(
         ['Add', 'cos', 'cos', 'cos', "Symbol('x0')", 'sin', 'sin', 'sin', 'Mul', 'cos', "Symbol('x0')", "Symbol('x0')"])
     f = equations_base.Equation(f, space=((0., 2.),))
-    f.add_observation(np.linspace(0.1, 2, num=100).reshape(-1, 1))
-    X = np.linspace(0.1, 2, num=100).reshape(-1, 1)
+    f.add_observation(np.linspace(0.1, 2, num=1000).reshape(-1, 1))
+    X = np.linspace(0.1, 2, num=1000).reshape(-1, 1)
     y_true = f.func(X)
 
     vae_solver_params = VAESolverParams(
@@ -446,6 +524,20 @@ def test_logger_local(exp_name):
     vs.solve(f, epochs=50)
 
 
+def tmp():
+    f = equations_utils.infix_to_expr(
+        "Add Add sin Symbol('x0') Symbol('x0') Add Symbol('x0') Mul sin Symbol('x0') sin sin Symbol('x0')".split())
+    f = equations_base.Equation(f, space=((0., 2.),))
+    print(f)
+
+    f = equations_utils.infix_to_expr(
+        "Add Add Mul sin sin Symbol('x0') cos cos Symbol('x0') Symbol('x0') Add sin Symbol('x0') Symbol('x0')".split())
+    f = equations_base.Equation(f, space=((0., 2.),))
+    print(f)
+
+
 if __name__ == '__main__':
     # last_5_epochs_experiment_no_constants_2_formula_8('COLAB_')
     check_train()
+    # tmp()
+    last_5_epochs_experiment_no_constants_more_operations_formula_1_10('TO_DELETE_')
