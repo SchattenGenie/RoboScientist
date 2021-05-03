@@ -39,7 +39,7 @@ RandomNodeSolverParams = namedtuple(
 RandomNodeSolverParams.__new__.__defaults__ = (
     None,                                           # true_formula
     1,                                              # x_dim
-    15,                                             # max_formula_length
+    14,                                             # max_formula_length
     ['sin', 'cos', 'Add', 'Mul'],                   # functions
     {'sin': 1, 'cos': 1, 'Add': 2, 'Mul': 2},       # arities
     ["Symbol('const%d')"],                          # optimizable_constants
@@ -89,7 +89,7 @@ class RandomNodeSolver(BaseSolver):
             f_to_eval = equations_utils.infix_to_expr(f_to_eval)
             f_to_eval = equations_base.Equation(f_to_eval)
             constants = optimize_constants.optimize_constants(f_to_eval, self.xs, self.ys)
-            y = f_to_eval.func(self.xs.reshape(-1, 1), constants)
+            # y = f_to_eval.func(self.xs.reshape(-1, 1), constants)
             valid_equations.append(f_to_eval.subs(constants))
 
         return Dataset(valid_equations), custom_log
