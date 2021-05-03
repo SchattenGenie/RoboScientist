@@ -560,12 +560,13 @@ def last_5_epochs_experiment_no_constants_more_operations_two_variables_formula_
     with open('wandb_key') as f:
         os.environ["WANDB_API_KEY"] = f.read().strip()
     f = equations_utils.infix_to_expr_with_arities(
-        ['sin', 'Add', "Symbol('x0')", "Symbol('x1')"],
+        ['Mul', 'Add', 'Div', "Symbol('x1')", "Symbol('x0')", 'Div', "Symbol('x0')", "Symbol('x1')", 'sin', "Symbol('x1')"],
         func_to_arity={'sin': 1, 'cos': 1, 'Add': 2, 'Mul': 2, 'Sub': 2, 'Div': 2, 'Pow': 2})
     f = equations_base.Equation(f, space=((0., 2.),(0., 2.),))
     X = np.random.uniform(low=0.1, high=2, size=(100, 2))
     f.add_observation(X)
     y_true = f.func(X)
+    print(f)
 
     vae_solver_params = VAESolverParams(
         device=torch.device('cuda'),
@@ -593,9 +594,9 @@ def last_5_epochs_experiment_no_constants_more_operations_two_variables_formula_
 
     logger = single_formula_logger.SingleFormulaLogger('some_experiments',
                                                        exp_name + \
-                                                       'TO_DELETE',
+                                                       'last_5_epochs_experiment_no_constants_more_operations_2d_formula_1_12',
                                                        logger_init_conf)
-    vs = VAESolver(logger, None, vae_solver_params)
+    vs = VAESolver(logger, 'checkpoint_div_sub_sin_cos_mul_add_no_constants_2d', vae_solver_params)
     vs.solve(f, epochs=100)
 
 
@@ -685,4 +686,4 @@ def tmp():
 if __name__ == '__main__':
     # check_train()
     # tmp()
-    last_5_epochs_experiment_no_constants_more_operations_formula_2_11('COLAB_')
+    last_5_epochs_experiment_no_constants_more_operations_two_variables_formula_1_12('COLAB_')
