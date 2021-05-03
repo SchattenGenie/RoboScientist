@@ -27,13 +27,6 @@ def build_single_batch_from_formulas_list(formulas_list, solver, batch_Xs, batch
             new_batch_ys.append(batch_ys[i])
         except:
             t_c +=1
-            # print(f)
-            # f_idx = [solver._token2ind[t] for t in f]
-            # padding = [solver._token2ind[config.PADDING]] * (max_len - len(f_idx))
-            # batch_in.append([solver._token2ind[config.START_OF_SEQUENCE]] + f_idx + padding)
-            # batch_out.append(f_idx + [solver._token2ind[config.END_OF_SEQUENCE]] + padding)
-            # new_batch_Xs.append(batch_Xs[i])
-            # new_batch_ys.append(batch_ys[i])
     print(f'Failed to add formula to single batch {t_c}/{len(formulas_list)}')
     # we transpose here to make it compatible with LSTM input
     return (torch.LongTensor(batch_in).T.contiguous().to(solver.params.device), \
@@ -64,21 +57,6 @@ def build_ordered_batches(formula_file, solver):
                 ys.append(y.reshape(-1, 1))
             except:
                 t_c += 1
-                f_to_eval = line.split()
-                # print(f_to_eval)
-                # print(Xs)
-                # f_to_eval = [float(x) if x in solver.params.float_constants else x for x in f_to_eval]
-                # print(1, f_to_eval)
-                # f_to_eval = equations_utils.infix_to_expr_with_arities(f_to_eval, solver.params.arities)
-                # print(2, f_to_eval)
-                # f_to_eval = equations_base.Equation(f_to_eval)
-                # print(3, f_to_eval)
-                # constants = optimize_constants.optimize_constants(f_to_eval, solver.xs, solver.ys)
-                # print(solver.xs.reshape(-1, solver.params.model_params['x_dim']))
-                # y = f_to_eval.func(solver.xs.reshape(-1, solver.params.model_params['x_dim']), constants)
-                # Xs.append(solver.xs.reshape(-1, solver.params.model_params['x_dim']))
-                # ys.append(y.reshape(-1, solver.params.model_params['x_dim']))
-    print(f'Failed to add formula to batch {t_c}/{total_count}')
 
     batches = []
     order = range(len(formulas))  # This will be necessary for reconstruction
