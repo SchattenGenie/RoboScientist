@@ -82,7 +82,7 @@ def _pick_next_point_max_var2(solver, candidate_xs, custom_log, valid_mses, vali
 
     sorted_pairs = list(sorted(zip(valid_mses, valid_equations), key=lambda x: x[0]))
     equations = [x[1] for x in sorted_pairs][:solver.params.active_learning_n_sample]
-    print(equations)
+    print('\n'.join([str(eq) for eq in equations]))
 
     w_c = 0
     all_c = 0
