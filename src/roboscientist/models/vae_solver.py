@@ -266,7 +266,7 @@ class VAESolver(BaseSolver):
 
         # TODO(julia) add active learning
         if self.params.active_learning and epoch % self.params.active_learning_epochs == 0:
-            next_point = active_learning.pick_next_point(solver=self)
+            next_point = active_learning.pick_next_point(solver=self, custom_log=custom_log)
             self._add_next_point(next_point)
             custom_log['next_point_value'] = next_point
 

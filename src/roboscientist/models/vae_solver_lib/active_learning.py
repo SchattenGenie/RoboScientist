@@ -36,7 +36,7 @@ def pairwise_dist(x, y):
     return P
 
 
-def _pick_next_point_max_var(solver, candidate_xs):
+def _pick_next_point_max_var(solver, candidate_xs, custom_log):
     # cond_x, cond_y = solver._get_condition(solver.params.active_learning_n_sample)
     # solver.model.sample(solver.params.active_learning_n_sample, solver.params.max_formula_length,
     #                     solver.params.active_learning_file_to_sample, Xs=cond_x, ys=cond_y, unique=False,
@@ -57,10 +57,12 @@ def _pick_next_point_max_var(solver, candidate_xs):
             except:
                 continue
     var = np.var(np.array(ys), axis=0)
+    custom_log['max_var'] = np.max(var)
+    custom_log['mean_var'] = np.mean(var)
     return candidate_xs[np.argmax(var)]
 
 
-def _pick_next_point_max_entropy(solver, candidate_xs):
+def _pick_next_point_max_entropy(solver, candidate_xs, custom_log):
     # cond_x, cond_y = solver._get_condition(solver.params.active_learning_n_sample)
     # solver.model.sample(solver.params.active_learning_n_sample, solver.params.max_formula_length,
     #                     solver.params.active_learning_file_to_sample, Xs=cond_x, ys=cond_y, unique=False,
@@ -85,18 +87,18 @@ def _pick_next_point_max_entropy(solver, candidate_xs):
     return candidate_xs[np.argmax(entropy)]
 
 
-def _pick_next_point_random(solver, candidate_xs):
+def _pick_next_point_random(solver, candidate_xs, custom_log):
     return candidate_xs[np.random.randint(0, len(candidate_xs), 1)]
 
 
-def pick_next_point(solver):
+def pick_next_point(solver, custom_log):
     candidate_xs = solver.params.true_formula.domain_sample(n=solver.params.active_learning_n_x_candidates)
     if solver.params.active_learning_strategy == 'var':
-        return _pick_next_point_max_var(solver, candidate_xs)
+        return _pick_next_point_max_var(solver, candidate_xs, custom_log)
     if solver.params.active_learning_strategy == 'random':
-        return _pick_next_point_random(solver, candidate_xs)
+        return _pick_next_point_random(solver, candidate_xs, custom_log)
     if solver.params.active_learning_strategy == 'entropy':
-        return _pick_next_point_max_entropy(solver, candidate_xs)
+        return _pick_next_point_max_entropy(solver, candidate_xs, custom_log)
     else:
         raise 57
 
