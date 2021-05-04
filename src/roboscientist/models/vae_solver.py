@@ -266,9 +266,16 @@ class VAESolver(BaseSolver):
 
         # TODO(julia) add active learning
         if self.params.active_learning and epoch % self.params.active_learning_epochs == 0:
-            next_point = active_learning.pick_next_point(solver=self, custom_log=custom_log)
+            next_point = active_learning.pick_next_point(solver=self, custom_log=custom_log,
+                                                         valid_mses=valid_mses, valid_equations=valid_equations)
             self._add_next_point(next_point)
             custom_log['next_point_value'] = next_point
+            print(self.xs)
+            if self.params.retrain_strategy == 'last_steps':
+                self.stats = FormulaStatisticsLastN(use_n_last_steps=self.params.use_n_last_steps,
+                                                    percentile=self.params.percentile)
+            if self.params.retrain_strategy == 'queue':
+                self.stats = FormulaStatisticsQueue(self.params.queue_size)
 
         return Dataset(valid_equations), custom_log
 
