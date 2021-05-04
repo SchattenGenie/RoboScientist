@@ -747,10 +747,10 @@ def formula_for_active_learning_2_AL_MAX_VAR_17(exp_name):
         ['Mul', 'cos', 'sin', 'Sub', 'Mul', "Symbol('x0')", "Symbol('x0')", 'Mul', 'sin', "Symbol('x0')", 'sin',
          "Symbol('x0')", 'cos', "Symbol('x0')"],
         func_to_arity={'sin': 1, 'cos': 1, 'Add': 2, 'Mul': 2, 'Sub': 2, 'Div': 2, 'Pow': 2})
-    f = equations_base.Equation(f, space=((0.1, 3.1),))
-    X = np.linspace(0.1, 3.1, num=5000).reshape(-1, 1)
+    f = equations_base.Equation(f, space=((2, 10),))
+    X = np.linspace(2, 10, num=5000).reshape(-1, 1)
     f.add_observation(X)
-    X = np.array([0.2, 1, 1.5, 2]).reshape(-1, 1)
+    X = np.array([3., 5., 7.]).reshape(-1, 1)
     y_true = f.func(X)
     print(f)
 
@@ -793,10 +793,10 @@ def formula_for_active_learning_2_AL_MAX_VAR2_17(exp_name):
         ['Mul', 'cos', 'sin', 'Sub', 'Mul', "Symbol('x0')", "Symbol('x0')", 'Mul', 'sin', "Symbol('x0')", 'sin',
          "Symbol('x0')", 'cos', "Symbol('x0')"],
         func_to_arity={'sin': 1, 'cos': 1, 'Add': 2, 'Mul': 2, 'Sub': 2, 'Div': 2, 'Pow': 2})
-    f = equations_base.Equation(f, space=((0.1, 3.1),))
-    X = np.linspace(0.1, 3.1, num=5000).reshape(-1, 1)
+    f = equations_base.Equation(f, space=((2, 10),))
+    X = np.linspace(2, 10, num=5000).reshape(-1, 1)
     f.add_observation(X)
-    X = np.array([0.2, 1, 1.5, 2]).reshape(-1, 1)
+    X = np.array([3., 5., 7.]).reshape(-1, 1)
     y_true = f.func(X)
     print(f)
 
@@ -840,10 +840,10 @@ def formula_for_active_learning_2_AL_RANDOM_17(exp_name):
         ['Mul', 'cos', 'sin', 'Sub', 'Mul', "Symbol('x0')", "Symbol('x0')", 'Mul', 'sin', "Symbol('x0')", 'sin',
          "Symbol('x0')", 'cos', "Symbol('x0')"],
         func_to_arity={'sin': 1, 'cos': 1, 'Add': 2, 'Mul': 2, 'Sub': 2, 'Div': 2, 'Pow': 2})
-    f = equations_base.Equation(f, space=((0.1, 3.1),))
-    X = np.linspace(0.1, 3.1, num=5000).reshape(-1, 1)
+    f = equations_base.Equation(f, space=((2, 10),))
+    X = np.linspace(2, 10, num=5000).reshape(-1, 1)
     f.add_observation(X)
-    X = np.array([0.2, 1, 1.5, 2]).reshape(-1, 1)
+    X = np.array([3., 5., 7.]).reshape(-1, 1)
     y_true = f.func(X)
     print(f)
 
@@ -874,6 +874,148 @@ def formula_for_active_learning_2_AL_RANDOM_17(exp_name):
     logger = single_formula_logger.SingleFormulaLogger('some_experiments',
                                                        exp_name + \
                                                        'formula_for_active_learning_2_AL_RANDOM_17',
+                                                       logger_init_conf)
+    vs = VAESolver(logger, 'checkpoint_div_sub_sin_cos_mul_add_no_constants', vae_solver_params)
+    vs.solve(f, epochs=100)
+
+
+def formula_for_active_learning_3_AL_MAX_VAR_18(exp_name):
+    with open('wandb_key') as f:
+        os.environ["WANDB_API_KEY"] = f.read().strip()
+    f = equations_utils.infix_to_expr_with_arities(
+        ['Add', 'cos', 'Div', 'Mul', 'Add', 'sin', "Symbol('x0')", 'cos', "Symbol('x0')", 'Add', 'sin',
+         "Symbol('x0')", 'cos', "Symbol('x0')", 'Mul', 'sin', "Symbol('x0')", "Symbol('x0')",
+         'sin', 'Sub', 'sin', "Symbol('x0')", 'cos', "Symbol('x0')", ],
+        func_to_arity={'sin': 1, 'cos': 1, 'Add': 2, 'Mul': 2, 'Sub': 2, 'Div': 2, 'Pow': 2})
+    f = equations_base.Equation(f, space=((2.5, 5.25),))
+    X = np.linspace(2.5, 5.25, num=5000).reshape(-1, 1)
+    f.add_observation(X)
+    X = np.array([3., 4., 5.]).reshape(-1, 1)
+    y_true = f.func(X)
+    print(f)
+
+    vae_solver_params = VAESolverParams(
+        device=torch.device('cuda'),
+        true_formula=f,
+        kl_coef=0.5,
+        percentile=5,
+        initial_xs=X,
+        initial_ys=y_true,
+        functions=['sin', 'cos', 'Add', 'Mul', 'Sub', 'Div'],
+        arities={'sin': 1, 'cos': 1, 'Add': 2, 'Mul': 2, 'Sub': 2, 'Div': 2, 'Pow': 2},
+        active_learning=True,
+        active_learning_epochs=5,
+        active_learning_strategy='var',
+        active_learning_n_x_candidates=10000,
+    )
+
+    logger_init_conf = {
+        'true formula_repr': str(f),
+        # **vae_solver_params._asdict(),
+    }
+    logger_init_conf.update(vae_solver_params._asdict())
+    logger_init_conf['device'] = 'gpu'
+    for key, item in logger_init_conf.items():
+        logger_init_conf[key] = str(item)
+
+    logger = single_formula_logger.SingleFormulaLogger('some_experiments',
+                                                       exp_name + \
+                                                       'formula_for_active_learning_3_AL_MAX_VAR_18',
+                                                       logger_init_conf)
+    vs = VAESolver(logger, 'checkpoint_div_sub_sin_cos_mul_add_no_constants', vae_solver_params)
+    vs.solve(f, epochs=100)
+
+
+def formula_for_active_learning_3_AL_MAX_VAR2_18(exp_name):
+    with open('wandb_key') as f:
+        os.environ["WANDB_API_KEY"] = f.read().strip()
+    f = equations_utils.infix_to_expr_with_arities(
+        ['Add', 'cos', 'Div', 'Mul', 'Add', 'sin', "Symbol('x0')", 'cos', "Symbol('x0')", 'Add', 'sin',
+         "Symbol('x0')", 'cos', "Symbol('x0')", 'Mul', 'sin', "Symbol('x0')", "Symbol('x0')",
+         'sin', 'Sub', 'sin', "Symbol('x0')", 'cos', "Symbol('x0')", ],
+        func_to_arity={'sin': 1, 'cos': 1, 'Add': 2, 'Mul': 2, 'Sub': 2, 'Div': 2, 'Pow': 2})
+    f = equations_base.Equation(f, space=((2.5, 5.25),))
+    X = np.linspace(2.5, 5.25, num=5000).reshape(-1, 1)
+    f.add_observation(X)
+    X = np.array([3., 4., 5.]).reshape(-1, 1)
+    y_true = f.func(X)
+    print(f)
+
+    vae_solver_params = VAESolverParams(
+        device=torch.device('cuda'),
+        true_formula=f,
+        kl_coef=0.5,
+        percentile=5,
+        initial_xs=X,
+        initial_ys=y_true,
+        functions=['sin', 'cos', 'Add', 'Mul', 'Sub', 'Div'],
+        arities={'sin': 1, 'cos': 1, 'Add': 2, 'Mul': 2, 'Sub': 2, 'Div': 2, 'Pow': 2},
+        active_learning=True,
+        active_learning_epochs=5,
+        active_learning_strategy='var2',
+        active_learning_n_x_candidates=10000,
+        active_learning_n_sample=10,
+    )
+
+    logger_init_conf = {
+        'true formula_repr': str(f),
+        # **vae_solver_params._asdict(),
+    }
+    logger_init_conf.update(vae_solver_params._asdict())
+    logger_init_conf['device'] = 'gpu'
+    for key, item in logger_init_conf.items():
+        logger_init_conf[key] = str(item)
+
+    logger = single_formula_logger.SingleFormulaLogger('some_experiments',
+                                                       exp_name + \
+                                                       'formula_for_active_learning_3_AL_MAX_VAR2_18',
+                                                       logger_init_conf)
+    vs = VAESolver(logger, 'checkpoint_div_sub_sin_cos_mul_add_no_constants', vae_solver_params)
+    vs.solve(f, epochs=100)
+
+
+def formula_for_active_learning_3_AL_RANDOM_18(exp_name):
+    with open('wandb_key') as f:
+        os.environ["WANDB_API_KEY"] = f.read().strip()
+    f = equations_utils.infix_to_expr_with_arities(
+        ['Add', 'cos', 'Div', 'Mul', 'Add', 'sin', "Symbol('x0')", 'cos', "Symbol('x0')", 'Add', 'sin',
+         "Symbol('x0')", 'cos', "Symbol('x0')", 'Mul', 'sin', "Symbol('x0')", "Symbol('x0')",
+         'sin', 'Sub', 'sin', "Symbol('x0')", 'cos', "Symbol('x0')", ],
+        func_to_arity={'sin': 1, 'cos': 1, 'Add': 2, 'Mul': 2, 'Sub': 2, 'Div': 2, 'Pow': 2})
+    f = equations_base.Equation(f, space=((2.5, 5.25),))
+    X = np.linspace(2.5, 5.25, num=5000).reshape(-1, 1)
+    f.add_observation(X)
+    X = np.array([3., 4., 5.]).reshape(-1, 1)
+    y_true = f.func(X)
+    print(f)
+
+    vae_solver_params = VAESolverParams(
+        device=torch.device('cuda'),
+        true_formula=f,
+        kl_coef=0.5,
+        percentile=5,
+        initial_xs=X,
+        initial_ys=y_true,
+        functions=['sin', 'cos', 'Add', 'Mul', 'Sub', 'Div'],
+        arities={'sin': 1, 'cos': 1, 'Add': 2, 'Mul': 2, 'Sub': 2, 'Div': 2, 'Pow': 2},
+        active_learning=True,
+        active_learning_epochs=5,
+        active_learning_strategy='random',
+        active_learning_n_x_candidates=10000,
+    )
+
+    logger_init_conf = {
+        'true formula_repr': str(f),
+        # **vae_solver_params._asdict(),
+    }
+    logger_init_conf.update(vae_solver_params._asdict())
+    logger_init_conf['device'] = 'gpu'
+    for key, item in logger_init_conf.items():
+        logger_init_conf[key] = str(item)
+
+    logger = single_formula_logger.SingleFormulaLogger('some_experiments',
+                                                       exp_name + \
+                                                       'formula_for_active_learning_3_AL_RANDOM_18',
                                                        logger_init_conf)
     vs = VAESolver(logger, 'checkpoint_div_sub_sin_cos_mul_add_no_constants', vae_solver_params)
     vs.solve(f, epochs=100)
