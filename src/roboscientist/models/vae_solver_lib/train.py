@@ -27,7 +27,7 @@ def build_single_batch_from_formulas_list(formulas_list, solver, batch_Xs, batch
             new_batch_ys.append(batch_ys[i])
         except:
             t_c +=1
-    print(f'Failed to add formula to single batch {t_c}/{len(formulas_list)}')
+    print(f'Failed to add formula to single batch {t_c}/{len(formulas_list)}', flush=True)
     # we transpose here to make it compatible with LSTM input
     return (torch.LongTensor(batch_in).T.contiguous().to(solver.params.device), \
            torch.LongTensor(batch_out).T.contiguous().to(solver.params.device)), \
@@ -69,7 +69,7 @@ def build_ordered_batches(formula_file, solver):
         if len(new_batch[1]) > 0:
             batches.append(new_batch)
         else:
-            print('0 formulas in batch -> skipping')
+            print('0 formulas in batch -> skipping', flush=True)
     return batches, order
 
 

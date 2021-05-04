@@ -36,31 +36,75 @@ def pairwise_dist(x, y):
     return P
 
 
-def _pick_next_point_max_var(solver, candidate_xs):
+def _pick_next_point_max_var(solver, candidate_xs, custom_log):
     # cond_x, cond_y = solver._get_condition(solver.params.active_learning_n_sample)
     # solver.model.sample(solver.params.active_learning_n_sample, solver.params.max_formula_length,
     #                     solver.params.active_learning_file_to_sample, Xs=cond_x, ys=cond_y, unique=False,
     #                     ensure_valid=False)
     ys = []
-    with open(solver.params.file_to_sample) as f:
+    with open(solver.params.retrain_file) as f:
+
+        def isfloat(value):
+            try:
+                float(value)
+                return True
+            except ValueError:
+                return False
+
+        w_c = 0
+        all_c = 0
         for line in f:
+            all_c += 1
             try:
                 f_to_eval = formula_infix_utils.clear_redundant_operations(line.strip().split(),
                                                                            solver.params.functions,
                                                                            solver.params.arities)
-                f_to_eval = [float(x) if x in solver.params.float_constants else x for x in f_to_eval]
+                f_to_eval = [float(x) if isfloat(x) else x for x in f_to_eval]
                 f_to_eval = equations_utils.infix_to_expr(f_to_eval)
                 f_to_eval = equations_base.Equation(f_to_eval)
                 constants = optimize_constants.optimize_constants(f_to_eval, solver.xs, solver.ys)
                 y = f_to_eval.func(candidate_xs.reshape(-1, 1), constants)
                 ys.append(y)
             except:
+                w_c += 1
                 continue
+    print(f'\nFailed to evaluate formulas {w_c}/{all_c}\n')
     var = np.var(np.array(ys), axis=0)
+    custom_log['max_var'] = np.max(var)
+    custom_log['mean_var'] = np.mean(var)
+    custom_log['min_x'] = np.min(candidate_xs)
+    custom_log['max_x'] = np.max(candidate_xs)
     return candidate_xs[np.argmax(var)]
 
 
-def _pick_next_point_max_entropy(solver, candidate_xs):
+def _pick_next_point_max_var2(solver, candidate_xs, custom_log, valid_mses, valid_equations):
+    ys = []
+
+    sorted_pairs = list(sorted(zip(valid_mses, valid_equations), key=lambda x: x[0]))
+    equations = [x[1] for x in sorted_pairs][:solver.params.active_learning_n_sample]
+    print(equations)
+
+    w_c = 0
+    all_c = 0
+
+    for f_to_eval in equations:
+        all_c += 1
+        try:
+            y = f_to_eval.func(candidate_xs.reshape(-1, 1))
+            ys.append(y)
+        except:
+            w_c += 1
+            continue
+    print(f'\nFailed to evaluate formulas {w_c}/{all_c}\n')
+    var = np.var(np.array(ys), axis=0)
+    custom_log['max_var'] = np.max(var)
+    custom_log['mean_var'] = np.mean(var)
+    custom_log['min_x'] = np.min(candidate_xs)
+    custom_log['max_x'] = np.max(candidate_xs)
+    return candidate_xs[np.argmax(var)]
+
+
+def _pick_next_point_max_entropy(solver, candidate_xs, custom_log):
     # cond_x, cond_y = solver._get_condition(solver.params.active_learning_n_sample)
     # solver.model.sample(solver.params.active_learning_n_sample, solver.params.max_formula_length,
     #                     solver.params.active_learning_file_to_sample, Xs=cond_x, ys=cond_y, unique=False,
@@ -85,18 +129,20 @@ def _pick_next_point_max_entropy(solver, candidate_xs):
     return candidate_xs[np.argmax(entropy)]
 
 
-def _pick_next_point_random(solver, candidate_xs):
+def _pick_next_point_random(solver, candidate_xs, custom_log):
     return candidate_xs[np.random.randint(0, len(candidate_xs), 1)]
 
 
-def pick_next_point(solver):
+def pick_next_point(solver, custom_log, valid_mses, valid_equations):
     candidate_xs = solver.params.true_formula.domain_sample(n=solver.params.active_learning_n_x_candidates)
     if solver.params.active_learning_strategy == 'var':
-        return _pick_next_point_max_var(solver, candidate_xs)
+        return _pick_next_point_max_var(solver, candidate_xs, custom_log)
+    if solver.params.active_learning_strategy == 'var2':
+        return _pick_next_point_max_var2(solver, candidate_xs, custom_log, valid_mses, valid_equations)
     if solver.params.active_learning_strategy == 'random':
-        return _pick_next_point_random(solver, candidate_xs)
+        return _pick_next_point_random(solver, candidate_xs, custom_log)
     if solver.params.active_learning_strategy == 'entropy':
-        return _pick_next_point_max_entropy(solver, candidate_xs)
+        return _pick_next_point_max_entropy(solver, candidate_xs, custom_log)
     else:
         raise 57
 
