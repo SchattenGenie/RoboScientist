@@ -776,5 +776,5 @@ def tmp():
 if __name__ == '__main__':
     # check_train()
     # tmp()
-    formula_for_active_learning_1_15('COLAB_')
+    formula_for_active_learning_1_AL_MAX_VAE_16('COLAB_')
     # last_5_epochs_experiment_no_constants_more_operations_two_variables_formula_1_12('COLAB_')
