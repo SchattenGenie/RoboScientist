@@ -609,7 +609,7 @@ def formula_for_active_learning_1_AL_MAX_VAE_16(exp_name):
     f = equations_base.Equation(f, space=((0.1, 3.01),))
     X = np.linspace(0.1, 3.01, num=5000).reshape(-1, 1)
     f.add_observation(X)
-    X = np.array([1.5]).reshape(-1, 1)
+    X = np.array([1, 1.5, 3]).reshape(-1, 1)
     y_true = f.func(X)
     print(f)
 

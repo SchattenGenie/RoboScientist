@@ -43,22 +43,37 @@ def _pick_next_point_max_var(solver, candidate_xs, custom_log):
     #                     ensure_valid=False)
     ys = []
     with open(solver.params.file_to_sample) as f:
+
+        def isfloat(value):
+            try:
+                float(value)
+                return True
+            except ValueError:
+                return False
+
+        w_c = 0
+        all_c = 0
         for line in f:
+            all_c += 1
             try:
                 f_to_eval = formula_infix_utils.clear_redundant_operations(line.strip().split(),
                                                                            solver.params.functions,
                                                                            solver.params.arities)
-                f_to_eval = [float(x) if x in solver.params.float_constants else x for x in f_to_eval]
+                f_to_eval = [float(x) if isfloat(x) else x for x in f_to_eval]
                 f_to_eval = equations_utils.infix_to_expr(f_to_eval)
                 f_to_eval = equations_base.Equation(f_to_eval)
                 constants = optimize_constants.optimize_constants(f_to_eval, solver.xs, solver.ys)
                 y = f_to_eval.func(candidate_xs.reshape(-1, 1), constants)
                 ys.append(y)
             except:
+                w_c += 1
                 continue
+    print(f'Failed to evaluate formulas {w_c}/{all_c}')
     var = np.var(np.array(ys), axis=0)
     custom_log['max_var'] = np.max(var)
     custom_log['mean_var'] = np.mean(var)
+    custom_log['min_x'] = np.min(candidate_xs)
+    custom_log['max_x'] = np.max(candidate_xs)
     return candidate_xs[np.argmax(var)]
 
 
