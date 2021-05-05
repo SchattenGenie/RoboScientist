@@ -181,6 +181,13 @@ class VAESolver(BaseSolver):
                            pretrain_batches=self.pretrain_batches, pretrain_val_batches=self.valid_batches,
                            kl_coef=self.params.kl_coef)
 
+    def log_metrics(self, equation, candidate_equations, custom_log):
+        if not self.params.active_learning:
+            self._logger.log_metrics(equation, candidate_equations)
+        else:
+            self._logger.log_metrics(equation, candidate_equations, self.xs, self.ys)
+        self._logger.commit_metrics(custom_log)
+
     def create_checkpoint(self, checkpoint_file):
         torch.save({
             'model_state_dict': self.model.state_dict(),
