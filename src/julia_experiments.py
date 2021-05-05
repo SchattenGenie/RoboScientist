@@ -9,6 +9,7 @@ import numpy as np
 import torch
 
 import os
+import sys
 
 
 def last_5_epochs_experiment0(exp_name):
@@ -1151,5 +1152,21 @@ def tmp():
 if __name__ == '__main__':
     # check_train()
     # tmp()
-    formula_for_active_learning_1_AL_MAX_VAR2_16('COLAB_')
+    # formula_for_active_learning_1_AL_MAX_VAR2_16('COLAB_')
     # last_5_epochs_experiment_no_constants_more_operations_two_variables_formula_1_12('COLAB_')
+    name = sys.argv[1]
+    tt = sys.argv[2]
+    exp_name = f'{tt}_'
+    if name == 'AL_1_VAR2':
+        formula_for_active_learning_1_AL_MAX_VAR2_16(exp_name)
+    elif name == 'AL_1_VAR':
+        formula_for_active_learning_1_AL_MAX_VAR_16(exp_name)
+    elif name == 'AL_1_RAND':
+        formula_for_active_learning_1_AL_RANDOM_16(exp_name)
+
+    if name == 'AL_3_VAR2':
+        formula_for_active_learning_3_AL_MAX_VAR2_18(exp_name)
+    elif name == 'AL_3_VAR':
+        formula_for_active_learning_3_AL_MAX_VAR_18(exp_name)
+    elif name == 'AL_3_RAND':
+        formula_for_active_learning_3_AL_RANDOM_18(exp_name)
