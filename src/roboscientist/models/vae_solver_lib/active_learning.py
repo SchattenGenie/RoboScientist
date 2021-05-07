@@ -104,6 +104,33 @@ def _pick_next_point_max_var2(solver, candidate_xs, custom_log, valid_mses, vali
     return candidate_xs[np.argmax(var)]
 
 
+def _pick_next_point_max_entropy2(solver, candidate_xs, custom_log, valid_mses, valid_equations):
+    ys = []
+
+    sorted_pairs = list(sorted(zip(valid_mses, valid_equations), key=lambda x: x[0]))
+    equations = [x[1] for x in sorted_pairs][:solver.params.active_learning_n_sample]
+    print('\n'.join([str(eq) for eq in equations]))
+
+    w_c = 0
+    all_c = 0
+
+    for f_to_eval in equations:
+        all_c += 1
+        try:
+            y = f_to_eval.func(candidate_xs.reshape(-1, 1))
+            ys.append(y)
+        except:
+            w_c += 1
+            continue
+    print(f'\nFailed to evaluate formulas {w_c}/{all_c}\n')
+    entropy = empirical_entropy(torch.from_numpy(np.array(ys).T))
+    custom_log['max_entropy'] = np.max(entropy)
+    custom_log['mean_entropy'] = np.mean(entropy)
+    custom_log['min_x'] = np.min(candidate_xs)
+    custom_log['max_x'] = np.max(candidate_xs)
+    return candidate_xs[np.argmax(entropy)]
+
+
 def _pick_next_point_max_entropy(solver, candidate_xs, custom_log):
     # cond_x, cond_y = solver._get_condition(solver.params.active_learning_n_sample)
     # solver.model.sample(solver.params.active_learning_n_sample, solver.params.max_formula_length,
@@ -125,7 +152,10 @@ def _pick_next_point_max_entropy(solver, candidate_xs, custom_log):
             except:
                 continue
     entropy = empirical_entropy(torch.from_numpy(np.array(ys).T))
-    print(entropy)
+    custom_log['max_entropy'] = np.max(entropy)
+    custom_log['mean_entropy'] = np.mean(entropy)
+    custom_log['min_x'] = np.min(candidate_xs)
+    custom_log['max_x'] = np.max(candidate_xs)
     return candidate_xs[np.argmax(entropy)]
 
 
@@ -143,6 +173,8 @@ def pick_next_point(solver, custom_log, valid_mses, valid_equations):
         return _pick_next_point_random(solver, candidate_xs, custom_log)
     if solver.params.active_learning_strategy == 'entropy':
         return _pick_next_point_max_entropy(solver, candidate_xs, custom_log)
+    if solver.params.active_learning_strategy == 'entropy2':
+        return _pick_next_point_max_entropy2(solver, candidate_xs, custom_log, valid_mses, valid_equations)
     else:
         raise 57
 
