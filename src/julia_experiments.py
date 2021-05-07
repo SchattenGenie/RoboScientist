@@ -734,6 +734,50 @@ def last_5_epochs_experiment_no_constants_more_operations_formula_3_200(exp_name
     vs.solve(f, epochs=100)
 
 
+def last_5_epochs_experiment_no_constants_more_operations_formula_4_201(exp_name):
+    with open('wandb_key') as f:
+        os.environ["WANDB_API_KEY"] = f.read().strip()
+    f = equations_utils.infix_to_expr_with_arities(
+        ['Sub', 'cos', 'Add', 'sin', "Symbol('x0')", "Symbol('x0')", 'Mul', 'sin', "Symbol('x0')", 'cos', 'Div',
+         "Symbol('x0')", 'cos', "Symbol('x0')"],
+        func_to_arity={'sin': 1, 'cos': 1, 'Add': 2, 'Mul': 2, 'Sub': 2, 'Div': 2, 'Pow': 2})
+    f = equations_base.Equation(f, space=((0.05, 5.),))
+    f.add_observation(np.linspace(0.05, 5., num=5000).reshape(-1, 1))
+    X = np.linspace(0.05, 5., num=5000).reshape(-1, 1)
+    y_true = f.func(X)
+
+    vae_solver_params = VAESolverParams(
+        device=torch.device('cuda'),
+        true_formula=f,
+        kl_coef=0.5,
+        percentile=5,
+        initial_xs=X,
+        initial_ys=y_true,
+        functions=['sin', 'cos', 'Add', 'Mul', 'Sub', 'Div'],
+        arities={'sin': 1, 'cos': 1, 'Add': 2, 'Mul': 2, 'Sub': 2, 'Div': 2, 'Pow': 2},
+        retrain_file='retrain_1_' + str(time.time()),
+        file_to_sample='sample_1_' + str(time.time()),
+    )
+    print(vae_solver_params.retrain_file)
+    print(vae_solver_params.file_to_sample)
+
+    logger_init_conf = {
+        'true formula_repr': str(f),
+        # **vae_solver_params._asdict(),
+    }
+    logger_init_conf.update(vae_solver_params._asdict())
+    logger_init_conf['device'] = 'gpu'
+    for key, item in logger_init_conf.items():
+        logger_init_conf[key] = str(item)
+
+    logger = single_formula_logger.SingleFormulaLogger('some_experiments',
+                                                       exp_name + \
+                                                       'last_5_epochs_experiment_no_constants_more_operations_formula_4_201',
+                                                       logger_init_conf)
+    vs = VAESolver(logger, 'checkpoint_div_sub_sin_cos_mul_add_no_constants', vae_solver_params)
+    vs.solve(f, epochs=100)
+
+
 def formula_for_active_learning_1_15(exp_name):
     with open('wandb_key') as f:
         os.environ["WANDB_API_KEY"] = f.read().strip()
@@ -826,6 +870,108 @@ def formula_for_active_learning_1_AL_MAX_VAR_16(exp_name):
     logger = single_formula_logger.SingleFormulaLogger('some_experiments',
                                                        exp_name + \
                                                        'formula_for_active_learning_1_AL_MAX_VAR_16',
+                                                       logger_init_conf)
+    vs = VAESolver(logger, 'checkpoint_div_sub_sin_cos_mul_add_no_constants', vae_solver_params)
+    vs.solve(f, epochs=100)
+
+
+def formula_for_active_learning_1_AL_MAX_ENTROPY_16_every_1(exp_name):
+    with open('wandb_key') as f:
+        os.environ["WANDB_API_KEY"] = f.read().strip()
+    f = equations_utils.infix_to_expr_with_arities(
+        ['Add', 'cos', 'Div', 'Add', 'cos', "Symbol('x0')", "Symbol('x0')",
+         'sin', "Symbol('x0')", 'sin', 'Div', 'sin',
+         "Symbol('x0')", "Symbol('x0')"],
+        func_to_arity={'sin': 1, 'cos': 1, 'Add': 2, 'Mul': 2, 'Sub': 2, 'Div': 2, 'Pow': 2})
+    f = equations_base.Equation(f, space=((0.1, 3.1),))
+    X = np.linspace(0.1, 3.1, num=5000).reshape(-1, 1)
+    f.add_observation(X)
+    X = np.array([0.2, 1, 1.5, 2]).reshape(-1, 1)
+    y_true = f.func(X)
+    print(f)
+
+    vae_solver_params = VAESolverParams(
+        device=torch.device('cuda'),
+        true_formula=f,
+        kl_coef=0.5,
+        percentile=5,
+        initial_xs=X,
+        initial_ys=y_true,
+        functions=['sin', 'cos', 'Add', 'Mul', 'Sub', 'Div'],
+        arities={'sin': 1, 'cos': 1, 'Add': 2, 'Mul': 2, 'Sub': 2, 'Div': 2, 'Pow': 2},
+        active_learning=True,
+        active_learning_epochs=1,
+        active_learning_strategy='entropy',
+        active_learning_n_x_candidates=10000,
+        retrain_file='retrain_1_' + str(time.time()),
+        file_to_sample='sample_1_' + str(time.time()),
+    )
+    print(vae_solver_params.retrain_file)
+    print(vae_solver_params.file_to_sample)
+
+    logger_init_conf = {
+        'true formula_repr': str(f),
+        # **vae_solver_params._asdict(),
+    }
+    logger_init_conf.update(vae_solver_params._asdict())
+    logger_init_conf['device'] = 'gpu'
+    for key, item in logger_init_conf.items():
+        logger_init_conf[key] = str(item)
+
+    logger = single_formula_logger.SingleFormulaLogger('some_experiments',
+                                                       exp_name + \
+                                                       'formula_for_active_learning_1_AL_MAX_ENTROPY_16_every_1',
+                                                       logger_init_conf)
+    vs = VAESolver(logger, 'checkpoint_div_sub_sin_cos_mul_add_no_constants', vae_solver_params)
+    vs.solve(f, epochs=100)
+
+
+def formula_for_active_learning_1_AL_MAX_ENTROPY2_16_every_1(exp_name):
+    with open('wandb_key') as f:
+        os.environ["WANDB_API_KEY"] = f.read().strip()
+    f = equations_utils.infix_to_expr_with_arities(
+        ['Add', 'cos', 'Div', 'Add', 'cos', "Symbol('x0')", "Symbol('x0')",
+         'sin', "Symbol('x0')", 'sin', 'Div', 'sin',
+         "Symbol('x0')", "Symbol('x0')"],
+        func_to_arity={'sin': 1, 'cos': 1, 'Add': 2, 'Mul': 2, 'Sub': 2, 'Div': 2, 'Pow': 2})
+    f = equations_base.Equation(f, space=((0.1, 3.1),))
+    X = np.linspace(0.1, 3.1, num=5000).reshape(-1, 1)
+    f.add_observation(X)
+    X = np.array([0.2, 1, 1.5, 2]).reshape(-1, 1)
+    y_true = f.func(X)
+    print(f)
+
+    vae_solver_params = VAESolverParams(
+        device=torch.device('cuda'),
+        true_formula=f,
+        kl_coef=0.5,
+        percentile=5,
+        initial_xs=X,
+        initial_ys=y_true,
+        functions=['sin', 'cos', 'Add', 'Mul', 'Sub', 'Div'],
+        arities={'sin': 1, 'cos': 1, 'Add': 2, 'Mul': 2, 'Sub': 2, 'Div': 2, 'Pow': 2},
+        active_learning=True,
+        active_learning_epochs=1,
+        active_learning_strategy='entropy2',
+        active_learning_n_x_candidates=10000,
+        retrain_file='retrain_1_' + str(time.time()),
+        file_to_sample='sample_1_' + str(time.time()),
+    )
+    print(vae_solver_params.retrain_file)
+    print(vae_solver_params.file_to_sample)
+
+    logger_init_conf = {
+        'true formula_repr': str(f),
+        # **vae_solver_params._asdict(),
+    }
+    logger_init_conf.update(vae_solver_params._asdict())
+    logger_init_conf['device'] = 'gpu'
+    for key, item in logger_init_conf.items():
+        logger_init_conf[key] = str(item)
+
+    logger = single_formula_logger.SingleFormulaLogger('some_experiments',
+                                                       exp_name + \
+                                                       'formula_for_active_learning_1_AL_MAX_ENTROPY2_16_every_1',
                                                        logger_init_conf)
     vs = VAESolver(logger, 'checkpoint_div_sub_sin_cos_mul_add_no_constants', vae_solver_params)
     vs.solve(f, epochs=100)
@@ -1900,6 +2046,55 @@ def last_5_epochs_experiment_no_constants_more_operations_two_variables_formula_
     vs.solve(f, epochs=100)
 
 
+def last_5_epochs_experiment_no_constants_more_operations_two_variables_formula_3_133(exp_name):
+    with open('wandb_key') as f:
+        os.environ["WANDB_API_KEY"] = f.read().strip()
+    f = equations_utils.infix_to_expr_with_arities(
+        ['Add', 'Add', 'sin', "Symbol('x0')", 'cos', 'cos', "Symbol('x1')", 'Mul', "Symbol('x1')", 'sin', 'cos',
+         "Symbol('x0')"],
+        func_to_arity={'sin': 1, 'cos': 1, 'Add': 2, 'Mul': 2, 'Sub': 2, 'Div': 2, 'Pow': 2})
+    f = equations_base.Equation(f, space=((-2., 2.),(-2., 2.),))
+    X = np.random.uniform(low=-2., high=2., size=(1000, 2))
+    f.add_observation(X)
+    y_true = f.func(X)
+    print(f)
+
+    vae_solver_params = VAESolverParams(
+        device=torch.device('cuda'),
+        true_formula=f,
+        kl_coef=0.5,
+        percentile=5,
+        initial_xs=X,
+        initial_ys=y_true,
+        functions=['sin', 'cos', 'Add', 'Mul', 'Sub', 'Div'],
+        arities={'sin': 1, 'cos': 1, 'Add': 2, 'Mul': 2, 'Sub': 2, 'Div': 2, 'Pow': 2},
+        free_variables=["Symbol('x0')", "Symbol('x1')"],
+        model_params={'token_embedding_dim': 128, 'hidden_dim': 128,
+                      'encoder_layers_cnt': 1, 'decoder_layers_cnt': 1,
+                      'latent_dim': 8, 'x_dim': 2},
+        retrain_file='retrain_1_' + str(time.time()),
+        file_to_sample='sample_1_' + str(time.time()),
+    )
+    print(vae_solver_params.retrain_file)
+    print(vae_solver_params.file_to_sample)
+
+    logger_init_conf = {
+        'true formula_repr': str(f),
+        # **vae_solver_params._asdict(),
+    }
+    logger_init_conf.update(vae_solver_params._asdict())
+    logger_init_conf['device'] = 'gpu'
+    for key, item in logger_init_conf.items():
+        logger_init_conf[key] = str(item)
+
+    logger = single_formula_logger.SingleFormulaLogger('some_experiments',
+                                                       exp_name + \
+                                                       'last_5_epochs_experiment_no_constants_more_operations_two_variables_formula_3_133',
+                                                       logger_init_conf)
+    vs = VAESolver(logger, 'checkpoint_div_sub_sin_cos_mul_add_no_constants_2d', vae_solver_params)
+    vs.solve(f, epochs=100)
+
+
 def last_5_epochs_experiment_no_constants_more_operations_two_variables_formula_2_300(exp_name):
     with open('wandb_key') as f:
         os.environ["WANDB_API_KEY"] = f.read().strip()
@@ -2071,6 +2266,10 @@ if __name__ == '__main__':
         formula_for_active_learning_1_AL_MAX_VAR2_every_1_50_sample_16(exp_name)
     elif name == 'AL_1_CHECK':
         formula_for_active_learning_1_15(exp_name)
+    elif name == 'AL_1_ENTROPY_EVERY1':
+        formula_for_active_learning_1_AL_MAX_ENTROPY_16_every_1(exp_name)
+    elif name == 'AL_1_ENTROPY2_EVERY1':
+        formula_for_active_learning_1_AL_MAX_ENTROPY2_16_every_1(exp_name)
 
     elif name == 'AL_4_CHECK':
         formula_for_active_learning_4_1000(exp_name)
@@ -2089,3 +2288,7 @@ if __name__ == '__main__':
         last_5_epochs_experiment_no_constants_more_operations_formula_3_200(exp_name)
     elif name == '2d_2':
         last_5_epochs_experiment_no_constants_more_operations_two_variables_formula_2_300(exp_name)
+    elif name == 'div_4':
+        last_5_epochs_experiment_no_constants_more_operations_formula_4_201(exp_name)
+    elif name == '3d_3':
+        last_5_epochs_experiment_no_constants_more_operations_two_variables_formula_3_133(exp_name)
