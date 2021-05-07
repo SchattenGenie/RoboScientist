@@ -482,7 +482,7 @@ def last_5_epochs_experiment_no_constants_2_formula_8(exp_name):
                                                        exp_name + 'last_5_epochs_experiment_no_constants_2_formula_7',
                                                        logger_init_conf)
     vs = VAESolver(logger, 'checkpoint_sin_cos_mul_add_14_no_constants', vae_solver_params)
-    vs.solve(f, epochs=50)
+    vs.solve(f, epochs=100)
 
 
 def last_5_epochs_experiment_no_constants_9(exp_name):
@@ -521,7 +521,7 @@ def last_5_epochs_experiment_no_constants_9(exp_name):
                                                        exp_name + 'last_5_epochs_experiment_no_constants_9_formula_3',
                                                        logger_init_conf)
     vs = VAESolver(logger, 'checkpoint_sin_cos_mul_add_14_no_constants', vae_solver_params)
-    vs.solve(f, epochs=50)
+    vs.solve(f, epochs=100)
 
 
 def last_5_epochs_experiment_no_constants_100(exp_name):
@@ -902,7 +902,7 @@ def formula_for_active_learning_1_AL_MAX_ENTROPY_16_every_1(exp_name):
         active_learning=True,
         active_learning_epochs=1,
         active_learning_strategy='entropy',
-        active_learning_n_x_candidates=10000,
+        active_learning_n_x_candidates=100,
         retrain_file='retrain_1_' + str(time.time()),
         file_to_sample='sample_1_' + str(time.time()),
     )
@@ -953,7 +953,7 @@ def formula_for_active_learning_1_AL_MAX_ENTROPY2_16_every_1(exp_name):
         active_learning=True,
         active_learning_epochs=1,
         active_learning_strategy='entropy2',
-        active_learning_n_x_candidates=10000,
+        active_learning_n_x_candidates=100,
         retrain_file='retrain_1_' + str(time.time()),
         file_to_sample='sample_1_' + str(time.time()),
     )
@@ -2292,3 +2292,7 @@ if __name__ == '__main__':
         last_5_epochs_experiment_no_constants_more_operations_formula_4_201(exp_name)
     elif name == '3d_3':
         last_5_epochs_experiment_no_constants_more_operations_two_variables_formula_3_133(exp_name)
+    elif name == 'sin_3':
+        last_5_epochs_experiment_no_constants_9(exp_name)
+    elif name == 'sin_2':
+        last_5_epochs_experiment_no_constants_2_formula_8(exp_name)
