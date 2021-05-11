@@ -1,6 +1,6 @@
 # TODO(julia): delete or rewrite this file
 
-import formula_infix_utils
+from . import formula_infix_utils
 
 import random
 import numpy as np
