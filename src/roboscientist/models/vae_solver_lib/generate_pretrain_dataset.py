@@ -1,6 +1,6 @@
 # TODO(julia): delete or rewrite this file
 
-from. import formula_infix_utils
+import formula_infix_utils
 
 import random
 import numpy as np
@@ -27,7 +27,7 @@ def generate_formula(all_tokens, max_len, functions, arities):
 
 def generate_pretrain_dataset(size, max_len, file=None, functions=None, arities=None, all_tokens=None):
     if all_tokens is None:
-        all_tokens = ['cos', 'sin', 'Add', 'Mul', "Symbol('x0')", 'Div', 'Sub']
+        all_tokens = ['cos', 'sin', 'Add', 'Mul', "Symbol('x0')", 'Div', 'Sub', "Symbol('const%d')"]
     if functions is None:
         functions = ['cos', 'sin', 'Add', 'Mul', 'Div', 'Sub']
     if arities is None:
@@ -50,5 +50,5 @@ def generate_pretrain_dataset(size, max_len, file=None, functions=None, arities=
 
 
 if __name__ == '__main__':
-    generate_pretrain_dataset(20000, 14, 'train_cos_sin_add_mul_div_sub_no_constants')
-    generate_pretrain_dataset(10000, 14, 'val_cos_sin_add_mul_div_sub_no_constants')
+    generate_pretrain_dataset(20000, 14, 'train_cos_sin_add_mul_div_sub_with_constants')
+    generate_pretrain_dataset(10000, 14, 'val_cos_sin_add_mul_div_sub_with_constants')

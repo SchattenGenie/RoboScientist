@@ -671,40 +671,40 @@ def last_5_epochs_experiment_no_constants_random_node_solver_7(exp_name):
     vs.solve(f, epochs=50)
 
 
-def formula_2_queue(exp_name):
-    with open('wandb_key') as f:
-        os.environ["WANDB_API_KEY"] = f.read().strip()
-    f = equations_utils.infix_to_expr(
-        ['Add', 'Add', 'Mul', "Add", "sin", "Symbol('x0')", "Symbol('x0')", 'sin', "Symbol('x0')", 'cos', 'cos', "Symbol('x0')",
-         "Symbol('x0')"])
-    f = equations_base.Equation(f, space=((0., 2.),))
-    f.add_observation(np.linspace(0.1, 2, num=100).reshape(-1, 1))
-    X = np.linspace(0.1, 2, num=100).reshape(-1, 1)
-    y_true = f.func(X)
-
-    random_solver_params = RandomNodeSolverParams(
-        true_formula=f,
-        initial_xs=X,
-        initial_ys=y_true,
-        optimizable_constants=[],
-        retrain_strategy='queue',
-    )
-
-    logger_init_conf = {
-        'true formula_repr': str(f),
-        # **vae_solver_params._asdict(),
-    }
-    logger_init_conf.update(random_solver_params._asdict())
-    # logger_init_conf['device'] = 'gpu'
-    for key, item in logger_init_conf.items():
-        logger_init_conf[key] = str(item)
-
-    logger = single_formula_logger.SingleFormulaLogger('some_experiments',
-                                                       exp_name + \
-                                                       'formula_2_queue',
-                                                       logger_init_conf)
-    vs = RandomNodeSolver(logger, random_solver_params)
-    vs.solve(f, epochs=50)
+# def formula_2_queue(exp_name):
+#     with open('wandb_key') as f:
+#         os.environ["WANDB_API_KEY"] = f.read().strip()
+#     f = equations_utils.infix_to_expr(
+#         ['Add', 'Add', 'Mul', "Add", "sin", "Symbol('x0')", "Symbol('x0')", 'sin', "Symbol('x0')", 'cos', 'cos', "Symbol('x0')",
+#          "Symbol('x0')"])
+#     f = equations_base.Equation(f, space=((0., 2.),))
+#     f.add_observation(np.linspace(0.1, 2, num=100).reshape(-1, 1))
+#     X = np.linspace(0.1, 2, num=100).reshape(-1, 1)
+#     y_true = f.func(X)
+#
+#     random_solver_params = RandomNodeSolverParams(
+#         true_formula=f,
+#         initial_xs=X,
+#         initial_ys=y_true,
+#         optimizable_constants=[],
+#         retrain_strategy='queue',
+#     )
+#
+#     logger_init_conf = {
+#         'true formula_repr': str(f),
+#         # **vae_solver_params._asdict(),
+#     }
+#     logger_init_conf.update(random_solver_params._asdict())
+#     # logger_init_conf['device'] = 'gpu'
+#     for key, item in logger_init_conf.items():
+#         logger_init_conf[key] = str(item)
+#
+#     logger = single_formula_logger.SingleFormulaLogger('some_experiments',
+#                                                        exp_name + \
+#                                                        'formula_2_queue',
+#                                                        logger_init_conf)
+#     vs = RandomNodeSolver(logger, random_solver_params)
+#     vs.solve(f, epochs=50)
 
 
 def last_5_epochs_experiment_no_constants_brute_force_7(exp_name):
@@ -1815,7 +1815,7 @@ def formula_for_active_learning_1_AL_MAX_ENTROPY_16_every_1(exp_name):
         active_learning=True,
         active_learning_epochs=1,
         active_learning_strategy='entropy',
-        active_learning_n_x_candidates=100,
+        active_learning_n_x_candidates=10000,
         retrain_file='retrain_1_' + str(time.time()),
         file_to_sample='sample_1_' + str(time.time()),
     )
@@ -1866,7 +1866,8 @@ def formula_for_active_learning_1_AL_MAX_ENTROPY2_16_every_1(exp_name):
         active_learning=True,
         active_learning_epochs=1,
         active_learning_strategy='entropy2',
-        active_learning_n_x_candidates=100,
+        active_learning_n_x_candidates=10000,
+        active_learning_n_sample=10,
         retrain_file='retrain_1_' + str(time.time()),
         file_to_sample='sample_1_' + str(time.time()),
     )
@@ -3206,6 +3207,50 @@ def tmp():
     print(f)
 
 
+def pretrain_5(exp_name):
+    with open('wandb_key') as f:
+        os.environ["WANDB_API_KEY"] = f.read().strip()
+    f = equations_utils.infix_to_expr_with_arities(
+        ['Add', 'Div', "Symbol('x0')", 3.14, 'Mul', 2.718, 'cos', 'Add', 'sin', 'Div', 'sin', "Symbol('x0')",
+         "Symbol('x0')", "Symbol('x0')"],
+        func_to_arity={'sin': 1, 'cos': 1, 'Add': 2, 'Mul': 2, 'Sub': 2, 'Div': 2, 'Pow': 2})
+    f = equations_base.Equation(f, space=((2., 3.),))
+    f.add_observation(np.linspace(2., 3, num=1000).reshape(-1, 1))
+    X = np.linspace(2., 3., num=1000).reshape(-1, 1)
+    y_true = f.func(X)
+
+    vae_solver_params = VAESolverParams(
+        device=torch.device('cuda'),
+        true_formula=f,
+        optimizable_constants=["Symbol('const%d')" % i for i in range(15)],
+        kl_coef=0.5,
+        percentile=5,
+        initial_xs=X,
+        initial_ys=y_true,
+        retrain_file='retrain_1_' + str(time.time()),
+        file_to_sample='sample_1_' + str(time.time()),
+        functions=['sin', 'cos', 'Add', 'Mul', 'Sub', 'Div'],
+        arities={'sin': 1, 'cos': 1, 'Add': 2, 'Mul': 2, 'Sub': 2, 'Div': 2, 'Pow': 2},
+    )
+    print(vae_solver_params.retrain_file)
+    print(vae_solver_params.file_to_sample)
+
+    logger_init_conf = {
+        'true formula_repr': str(f),
+        # **vae_solver_params._asdict(),
+    }
+    logger_init_conf.update(vae_solver_params._asdict())
+    logger_init_conf['device'] = 'gpu'
+    for key, item in logger_init_conf.items():
+        logger_init_conf[key] = str(item)
+
+    logger = single_formula_logger.SingleFormulaLogger('some_experiments',
+                                                       exp_name + 'tmp',
+                                                       logger_init_conf)
+    vs = VAESolver(logger, None, vae_solver_params)
+    vs.create_checkpoint('checkpoint_cos_sin_add_mull_div_sub_14')
+
+
 def constants_4(exp_name):
     with open('wandb_key') as f:
         os.environ["WANDB_API_KEY"] = f.read().strip()
@@ -3222,7 +3267,7 @@ def constants_4(exp_name):
         true_formula=f,
         optimizable_constants=["Symbol('const%d')" % i for i in range(15)],
         kl_coef=0.5,
-        percentile=3,
+        percentile=5,
         initial_xs=X,
         initial_ys=y_true,
         retrain_file='retrain_1_' + str(time.time()),
@@ -3244,6 +3289,50 @@ def constants_4(exp_name):
                                                        exp_name + 'constants_4',
                                                        logger_init_conf)
     vs = VAESolver(logger, 'checkpoint_cos_sin_add_mull_14', vae_solver_params)
+    vs.solve(f, epochs=200)
+
+
+def constants_5_more_operations(exp_name):
+    with open('wandb_key') as f:
+        os.environ["WANDB_API_KEY"] = f.read().strip()
+    f = equations_utils.infix_to_expr_with_arities(
+        ['Add', 'Div', "Symbol('x0')", 3.14, 'Mul', 2.718, 'cos', 'Add', 'sin', 'Div', 'sin', "Symbol('x0')",
+         "Symbol('x0')", "Symbol('x0')"],
+        func_to_arity={'sin': 1, 'cos': 1, 'Add': 2, 'Mul': 2, 'Sub': 2, 'Div': 2, 'Pow': 2})
+    f = equations_base.Equation(f, space=((2., 3.),))
+    f.add_observation(np.linspace(2., 3, num=1000).reshape(-1, 1))
+    X = np.linspace(2., 3., num=1000).reshape(-1, 1)
+    y_true = f.func(X)
+
+    vae_solver_params = VAESolverParams(
+        device=torch.device('cuda'),
+        true_formula=f,
+        optimizable_constants=["Symbol('const%d')" % i for i in range(15)],
+        kl_coef=0.5,
+        percentile=5,
+        initial_xs=X,
+        initial_ys=y_true,
+        retrain_file='retrain_1_' + str(time.time()),
+        file_to_sample='sample_1_' + str(time.time()),
+        functions=['sin', 'cos', 'Add', 'Mul', 'Sub', 'Div'],
+        arities={'sin': 1, 'cos': 1, 'Add': 2, 'Mul': 2, 'Sub': 2, 'Div': 2, 'Pow': 2},
+    )
+    print(vae_solver_params.retrain_file)
+    print(vae_solver_params.file_to_sample)
+
+    logger_init_conf = {
+        'true formula_repr': str(f),
+        # **vae_solver_params._asdict(),
+    }
+    logger_init_conf.update(vae_solver_params._asdict())
+    logger_init_conf['device'] = 'gpu'
+    for key, item in logger_init_conf.items():
+        logger_init_conf[key] = str(item)
+
+    logger = single_formula_logger.SingleFormulaLogger('some_experiments',
+                                                       exp_name + 'constants_5_more_operations',
+                                                       logger_init_conf)
+    vs = VAESolver(logger, 'checkpoint_cos_sin_add_mull_sub_div_14', vae_solver_params)
     vs.solve(f, epochs=200)
 
 
@@ -3366,8 +3455,8 @@ if __name__ == '__main__':
     ####### queue
     elif name == 'queue2':
         more_operations_formula_1_queue(exp_name)
-    elif name == 'queue1':
-        formula_2_queue(exp_name)
+    # elif name == 'queue1':
+    #     formula_2_queue(exp_name)
 
     ####### constants
     elif name == 'const_2':
@@ -3375,9 +3464,11 @@ if __name__ == '__main__':
     elif name == 'const_3':
         constants_3(exp_name)
 
-    elif name == 'const_2':
-        constants_2(exp_name)
-    elif name == 'const_3':
-        constants_3(exp_name)
+    # elif name == 'const_2':
+    #     constants_2(exp_name)
+    # elif name == 'const_3':
+    #     constants_3(exp_name)
     elif name == 'const_4':
         constants_4(exp_name)
+    elif name == 'const_5':
+        constants_5_more_operations(exp_name)
