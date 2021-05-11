@@ -109,7 +109,10 @@ def _pick_next_point_max_entropy2(solver, candidate_xs, custom_log, valid_mses, 
 
     sorted_pairs = list(sorted(zip(valid_mses, valid_equations), key=lambda x: x[0]))
     equations = [x[1] for x in sorted_pairs][:solver.params.active_learning_n_sample]
+    print(solver.params.active_learning_n_sample)
+    print(len( equations))
     print('\n'.join([str(eq) for eq in equations]))
+    print('done')
 
     w_c = 0
     all_c = 0
@@ -124,11 +127,13 @@ def _pick_next_point_max_entropy2(solver, candidate_xs, custom_log, valid_mses, 
             continue
     print(f'\nFailed to evaluate formulas {w_c}/{all_c}\n')
     entropy = empirical_entropy(torch.from_numpy(np.array(ys).T))
-    custom_log['max_entropy'] = np.max(entropy)
-    custom_log['mean_entropy'] = np.mean(entropy)
+    print(entropy)
+    custom_log['max_entropy'] = torch.max(entropy)
+    custom_log['mean_entropy'] = torch.mean(entropy)
     custom_log['min_x'] = np.min(candidate_xs)
     custom_log['max_x'] = np.max(candidate_xs)
-    return candidate_xs[np.argmax(entropy)]
+    print(torch.argmax(entropy))
+    return candidate_xs[torch.argmax(entropy)]
 
 
 def _pick_next_point_max_entropy(solver, candidate_xs, custom_log):
