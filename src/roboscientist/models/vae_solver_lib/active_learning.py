@@ -146,6 +146,13 @@ def _pick_next_point_max_var2(solver, candidate_xs, custom_log, valid_mses, vali
             continue
     print(f'\nFailed to evaluate formulas {w_c}/{all_c}\n')
     var = np.var(np.array(ys), axis=0)
+    mad = median_absolute_deviation(np.array(ys), axis=0)
+    with open(f'xs_{solver._epoch}') as f_out:
+        f_out.write(' '.join(str(a) for a in np.flatten(candidate_xs)))
+    with open(f'var_{solver._epoch}') as f_out:
+        f_out.write(' '.join(str(a) for a in np.flatten(var)))
+    with open(f'mad_{solver._epoch}') as f_out:
+        f_out.write(' '.join(str(a) for a in np.flatten(mad)))
     custom_log['max_var'] = np.max(var)
     custom_log['mean_var'] = np.mean(var)
     custom_log['min_x'] = np.min(candidate_xs)
