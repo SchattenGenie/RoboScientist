@@ -4,6 +4,7 @@ from roboscientist.datasets import equations_utils, equations_base
 import torch
 import numpy as np
 from scipy import special
+from scipy.stats import median_absolute_deviation
 
 
 def empirical_entropy(X):
@@ -70,8 +71,56 @@ def _pick_next_point_max_var(solver, candidate_xs, custom_log):
                 continue
     print(f'\nFailed to evaluate formulas {w_c}/{all_c}\n')
     var = np.var(np.array(ys), axis=0)
+    mad = median_absolute_deviation(np.array(ys), axis=0)
+    with open(f'xs_{solver._epoch}') as f_out:
+        f_out.write(' '.join(str(a) for a in np.flatten(candidate_xs)))
+    with open(f'var_{solver._epoch}') as f_out:
+        f_out.write(' '.join(str(a) for a in np.flatten(var)))
+    with open(f'mad_{solver._epoch}') as f_out:
+        f_out.write(' '.join(str(a) for a in np.flatten(mad)))
     custom_log['max_var'] = np.max(var)
     custom_log['mean_var'] = np.mean(var)
+    custom_log['min_x'] = np.min(candidate_xs)
+    custom_log['max_x'] = np.max(candidate_xs)
+    return candidate_xs[np.argmax(var)]
+
+
+def _pick_next_point_max_var_robust(solver, candidate_xs, custom_log):
+    # cond_x, cond_y = solver._get_condition(solver.params.active_learning_n_sample)
+    # solver.model.sample(solver.params.active_learning_n_sample, solver.params.max_formula_length,
+    #                     solver.params.active_learning_file_to_sample, Xs=cond_x, ys=cond_y, unique=False,
+    #                     ensure_valid=False)
+    ys = []
+    with open(solver.params.retrain_file) as f:
+
+        def isfloat(value):
+            try:
+                float(value)
+                return True
+            except ValueError:
+                return False
+
+        w_c = 0
+        all_c = 0
+        for line in f:
+            all_c += 1
+            try:
+                f_to_eval = formula_infix_utils.clear_redundant_operations(line.strip().split(),
+                                                                           solver.params.functions,
+                                                                           solver.params.arities)
+                f_to_eval = [float(x) if isfloat(x) else x for x in f_to_eval]
+                f_to_eval = equations_utils.infix_to_expr(f_to_eval)
+                f_to_eval = equations_base.Equation(f_to_eval)
+                constants = optimize_constants.optimize_constants(f_to_eval, solver.xs, solver.ys)
+                y = f_to_eval.func(candidate_xs.reshape(-1, 1), constants)
+                ys.append(y)
+            except:
+                w_c += 1
+                continue
+    print(f'\nFailed to evaluate formulas {w_c}/{all_c}\n')
+    var = median_absolute_deviation(np.array(ys), axis=0)
+    custom_log['max_mad'] = np.max(var)
+    custom_log['mean_mad'] = np.mean(var)
     custom_log['min_x'] = np.min(candidate_xs)
     custom_log['max_x'] = np.max(candidate_xs)
     return candidate_xs[np.argmax(var)]
@@ -180,6 +229,8 @@ def pick_next_point(solver, custom_log, valid_mses, valid_equations):
         return _pick_next_point_max_entropy(solver, candidate_xs, custom_log)
     if solver.params.active_learning_strategy == 'entropy2':
         return _pick_next_point_max_entropy2(solver, candidate_xs, custom_log, valid_mses, valid_equations)
+    if solver.params.active_learning_strategy == 'mad':
+        _pick_next_point_max_var_robust(solver, candidate_xs, custom_log)
     else:
         raise 57
 

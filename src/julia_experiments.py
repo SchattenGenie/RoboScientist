@@ -2099,6 +2099,58 @@ def formula_for_active_learning_1_AL_MAX_VAR_every_1_16(exp_name):
     vs.solve(f, epochs=100)
 
 
+def formula_for_active_learning_1_AL_MAX_VAR_ROBUST_every_1_16(exp_name):
+    with open('wandb_key') as f:
+        os.environ["WANDB_API_KEY"] = f.read().strip()
+    f = equations_utils.infix_to_expr_with_arities(
+        ['Add', 'cos', 'Div', 'Add', 'cos', "Symbol('x0')", "Symbol('x0')",
+         'sin', "Symbol('x0')", 'sin', 'Div', 'sin',
+         "Symbol('x0')", "Symbol('x0')"],
+        func_to_arity={'sin': 1, 'cos': 1, 'Add': 2, 'Mul': 2, 'Sub': 2, 'Div': 2, 'Pow': 2})
+    f = equations_base.Equation(f, space=((0.1, 3.1),))
+    X = np.linspace(0.1, 3.1, num=5000).reshape(-1, 1)
+    f.add_observation(X)
+    X = np.array([0.2, 1, 1.5, 2]).reshape(-1, 1)
+    y_true = f.func(X)
+    print(f)
+
+    vae_solver_params = VAESolverParams(
+        device=torch.device('cuda'),
+        true_formula=f,
+        kl_coef=0.5,
+        percentile=5,
+        initial_xs=X,
+        initial_ys=y_true,
+        functions=['sin', 'cos', 'Add', 'Mul', 'Sub', 'Div'],
+        arities={'sin': 1, 'cos': 1, 'Add': 2, 'Mul': 2, 'Sub': 2, 'Div': 2, 'Pow': 2},
+        active_learning=True,
+        active_learning_epochs=1,
+        active_learning_strategy='mad',
+        active_learning_n_x_candidates=10000,
+        active_learning_n_sample=10,
+        retrain_file='retrain_1_' + str(time.time()),
+        file_to_sample='sample_1_' + str(time.time()),
+    )
+    print(vae_solver_params.retrain_file)
+    print(vae_solver_params.file_to_sample)
+
+    logger_init_conf = {
+        'true formula_repr': str(f),
+        # **vae_solver_params._asdict(),
+    }
+    logger_init_conf.update(vae_solver_params._asdict())
+    logger_init_conf['device'] = 'gpu'
+    for key, item in logger_init_conf.items():
+        logger_init_conf[key] = str(item)
+
+    logger = single_formula_logger.SingleFormulaLogger('some_experiments',
+                                                       exp_name + \
+                                                       'formula_for_active_learning_1_AL_MAX_VAR_ROBUST_every_1_16',
+                                                       logger_init_conf)
+    vs = VAESolver(logger, 'checkpoint_div_sub_sin_cos_mul_add_no_constants', vae_solver_params)
+    vs.solve(f, epochs=100)
+
+
 def formula_for_active_learning_1_AL_MAX_VAR2_every_1_50_sample_16(exp_name):
     with open('wandb_key') as f:
         os.environ["WANDB_API_KEY"] = f.read().strip()
@@ -3403,6 +3455,8 @@ if __name__ == '__main__':
         more_operations_formula_1_vae_random_sampling(exp_name)
     elif name == 'more_operations_formula_2_no_retrain':
         more_operations_formula_2_vae_random_sampling(exp_name)
+    elif name == 'AL_1_VAR_ROBUST_EVERY_1':
+        formula_for_active_learning_1_AL_MAX_VAR_ROBUST_every_1_16(exp_name)
 
     ####### use last n steps
     elif name == 'formula_1_last_step_1':
