@@ -20,6 +20,7 @@ VAESolverParams = namedtuple(
         'model_params',                             # Dict with model parameters. Must include: token_embedding_dim,
                                                     # hidden_dim, encoder_layers_cnt, decoder_layers_cnt, latent_dim,
                                                     # x_dim
+        'is_condition',                             # is_condition
 
         # formula parameters
         'max_formula_length',                       # Int: Maximum length of a formula
@@ -99,6 +100,7 @@ VAESolverParams.__new__.__defaults__ = (
      'encoder_layers_cnt': 1,
      'decoder_layers_cnt': 1, 'latent_dim':  8,
      'x_dim': 1},                                   # model_params
+    True,                                           # is_condition
     15,                                             # max_formula_length
     2,                                              # max_degree
     ['sin', 'cos', 'Add', 'Mul'],                   # functions
@@ -164,7 +166,8 @@ class VAESolver(BaseSolver):
 
         model_params = model.ModelParams(vocab_size=len(self._ind2token), device=self.params.device,
                                          **self.params.model_params)
-        self.model = model.FormulaVARE(model_params, self._ind2token, self._token2ind)
+        self.model = model.FormulaVARE(model_params, self._ind2token, self._token2ind,
+                                       condition=self.params.is_condition)
         self.model.to(self.params.device)
         self.optimizer = torch.optim.Adam(self.model.parameters(), lr=self.params.learning_rate,
                                           betas=self.params.betas)

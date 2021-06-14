@@ -17,12 +17,14 @@ ModelParams.__new__.__defaults__ = (None,) * len(ModelParams._fields)
 
 class FormulaVARE(nn.Module):
     # VAE Architecture is based on https://github.com/shentianxiao/text-autoencoders
-    def __init__(self, model_params, ind2token, token2ind):
+    def __init__(self, model_params, ind2token, token2ind, condition=True):
         super().__init__()
 
-        # condition
-        self.condition_encoder = nn.Linear(model_params.x_dim + 1, model_params.hidden_dim)
-        self.condition_decoder = nn.Linear(model_params.x_dim + 1, model_params.hidden_dim)
+        self.is_condition = condition
+        if self.is_condition:
+            # condition
+            self.condition_encoder = nn.Linear(model_params.x_dim + 1, model_params.hidden_dim)
+            self.condition_decoder = nn.Linear(model_params.x_dim + 1, model_params.hidden_dim)
 
         self.encoder = nn.LSTM(model_params.token_embedding_dim, model_params.hidden_dim,
                                model_params.encoder_layers_cnt, dropout=0, bidirectional=True)
@@ -65,19 +67,28 @@ class FormulaVARE(nn.Module):
         :param y: y_dataset for each formula in tokens (y_i = f_i(X_i)) (batch_size, n_points, 1)
         :return: mu (batch_size, latent_dim), logsigma (batch_size, latent_dim)
         """
-        condition = torch.from_numpy(np.concatenate((X, y), axis=-1).astype(np.float32)).to(self.device)
-        # condition: (batch_size, n_points, x_dim + 1)
-        hidden = self.condition_encoder(condition).mean(dim=1)
-        # hidden: (batch_size, hidden_dim)
-        hidden = torch.repeat_interleave(hidden.unsqueeze(0), 2 * self.encoder_layers_cnt, dim=0)
+        # print('X', X.shape)
+        # print('y', y.shape)
+        if y.shape[-1] != 1:
+            for i in range(y.shape[0]):
+                print(y[i].shape)
+        if self.is_condition:
+            condition = torch.from_numpy(np.concatenate((X, y), axis=-1).astype(np.float32)).to(self.device)
+            # condition: (batch_size, n_points, x_dim + 1)
+            hidden = self.condition_encoder(condition).mean(dim=1)
+            # hidden: (batch_size, hidden_dim)
+            hidden = torch.repeat_interleave(hidden.unsqueeze(0), 2 * self.encoder_layers_cnt, dim=0)
         # hidden: (num_layers * num_directions, batch_size, hidden_dim)
         # tokens: (formula_len, batch_size)
         tokens = self.embedding(tokens)
         # tokens: (formula_len, batch_size, embedding_dim)
         tokens = self.drop(tokens)
         # hidden_state: (formula_len, batch_size, hidden_dim)
-        c = torch.zeros_like(hidden).to(self.device)
-        _, (hidden_state, _) = self.encoder(tokens, (hidden, c))
+        if self.is_condition:
+            c = torch.zeros_like(hidden).to(self.device)
+            _, (hidden_state, _) = self.encoder(tokens, (hidden, c))
+        else:
+            _, (hidden_state, _) = self.encoder(tokens)
         hidden_state = torch.cat([hidden_state[-2], hidden_state[-1]], 1)
         mu = self.hidden_to_mu(hidden_state)
         # mu: (batch_size, latent_dim)
@@ -117,14 +128,17 @@ class FormulaVARE(nn.Module):
         mu, logsigma = self.encode(tokens, Xs, ys)
         z = self.sample_z(mu, logsigma)
         # z: (batch_size, latent_dim)
-        condition = torch.from_numpy(np.concatenate((Xs, ys), axis=-1).astype(np.float32)).to(self.device)
-        # condition: (batch_size, n_points, x_dim + 1)
-        hidden = self.condition_decoder(condition).mean(dim=1)
-        hidden = torch.repeat_interleave(hidden.unsqueeze(0), 1 * self.encoder_layers_cnt, dim=0)
-        c = torch.zeros_like(hidden).to(self.device)
-        hidden = (hidden, c)
+        if self.is_condition:
+            condition = torch.from_numpy(np.concatenate((Xs, ys), axis=-1).astype(np.float32)).to(self.device)
+            # condition: (batch_size, n_points, x_dim + 1)
+            hidden = self.condition_decoder(condition).mean(dim=1)
+            hidden = torch.repeat_interleave(hidden.unsqueeze(0), 1 * self.encoder_layers_cnt, dim=0)
+            c = torch.zeros_like(hidden).to(self.device)
+            hidden = (hidden, c)
 
-        logits, _ = self.decode(tokens, z, hidden)
+            logits, _ = self.decode(tokens, z, hidden)
+        else:
+            logits, _ = self.decode(tokens, z)
         # logits: (formula_len, batch_size, vocab_size)
         return logits, mu, logsigma, z
 
@@ -235,7 +249,7 @@ class FormulaVARE(nn.Module):
             self._token2ind[config.START_OF_SEQUENCE])
         # tokens: (1, z_in_batch)
         hidden = None
-        if Xs is not None:
+        if Xs is not None and self.is_condition:
             condition = torch.from_numpy(np.concatenate((Xs, ys), axis=-1).astype(np.float32)).to(self.device)
             # condition: (batch_size, n_points, x_dim + 1)
             hidden = self.condition_decoder(condition).mean(dim=1)

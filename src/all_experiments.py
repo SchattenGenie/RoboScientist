@@ -22,7 +22,7 @@ def pretrain_sin_cos_mul_add_div_sub_exp_log(exp_name):
     with open('wandb_key') as f:
         os.environ["WANDB_API_KEY"] = f.read().strip()
     f = equations_utils.infix_to_expr(
-        ['sqrt', "Symbol('x0')"])
+        ['sin', "Symbol('x0')"])
     f = equations_base.Equation(f, space=((0.1, 2.),))
     f.add_observation(np.linspace(0.1, 2, num=1000).reshape(-1, 1))
     X = np.linspace(0.1, 2., num=1000).reshape(-1, 1)
@@ -31,19 +31,20 @@ def pretrain_sin_cos_mul_add_div_sub_exp_log(exp_name):
     vae_solver_params = VAESolverParams(
         device=torch.device('cuda'),
         true_formula=f,
-        optimizable_constants=["Symbol('const%d')" % i for i in range(15)],
+        # optimizable_constants=["Symbol('const%d')" % i for i in range(15)],
         kl_coef=0.5,
         percentile=5,
         initial_xs=X,
         initial_ys=y_true,
         retrain_file='retrain_1_' + str(time.time()),
         file_to_sample='sample_1_' + str(time.time()),
-        functions=['sin', 'cos', 'Add', 'Mul', 'Sub', 'Div'],
-        arities={'sin': 1, 'cos': 1, 'Add': 2, 'Mul': 2, 'Sub': 2, 'Div': 2, 'Pow': 2},
+        functions=['sin', 'cos', 'Add', 'Mul', 'Sub', 'Div', 'Pow', 'log'],
+        arities={'sin': 1, 'cos': 1, 'Add': 2, 'Mul': 2, 'Sub': 2, 'Div': 2, 'Pow': 2, 'log': 1},
         free_variables=["Symbol('x0')"],
         model_params={'token_embedding_dim': 128, 'hidden_dim': 128,
                       'encoder_layers_cnt': 1, 'decoder_layers_cnt': 1,
                       'latent_dim': 8, 'x_dim': 1},
+        is_condition=False,
     )
     print(vae_solver_params.retrain_file)
     print(vae_solver_params.file_to_sample)
@@ -68,7 +69,7 @@ def train_sin_cos_mul_add(exp_name):
     with open('wandb_key') as f:
         os.environ["WANDB_API_KEY"] = f.read().strip()
     f = equations_utils.infix_to_expr(
-        ['sqrt', "Symbol('x0')"])
+        ['sin', "Symbol('x0')"])
     f = equations_base.Equation(f, space=((0.1, 2.),))
     f.add_observation(np.linspace(0.1, 2, num=1000).reshape(-1, 1))
     X = np.linspace(0.1, 2., num=1000).reshape(-1, 1)
@@ -77,19 +78,20 @@ def train_sin_cos_mul_add(exp_name):
     vae_solver_params = VAESolverParams(
         device=torch.device('cuda'),
         true_formula=f,
-        optimizable_constants=["Symbol('const%d')" % i for i in range(15)],
+        # optimizable_constants=["Symbol('const%d')" % i for i in range(15)],
         kl_coef=0.5,
         percentile=5,
         initial_xs=X,
         initial_ys=y_true,
         retrain_file='retrain_1_' + str(time.time()),
         file_to_sample='sample_1_' + str(time.time()),
-        functions=['sin', 'cos', 'Add', 'Mul', 'Sub', 'Div'],
-        arities={'sin': 1, 'cos': 1, 'Add': 2, 'Mul': 2, 'Sub': 2, 'Div': 2, 'Pow': 2},
+        functions=['sin', 'cos', 'Add', 'Mul', 'Sub', 'Div', 'Pow', 'log'],
+        arities={'sin': 1, 'cos': 1, 'Add': 2, 'Mul': 2, 'Sub': 2, 'Div': 2, 'Pow': 2, 'log': 1},
         free_variables=["Symbol('x0')"],
         model_params={'token_embedding_dim': 128, 'hidden_dim': 128,
                       'encoder_layers_cnt': 1, 'decoder_layers_cnt': 1,
                       'latent_dim': 8, 'x_dim': 1},
+        is_condition=False,
     )
     print(vae_solver_params.retrain_file)
     print(vae_solver_params.file_to_sample)
